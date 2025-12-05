@@ -24,11 +24,11 @@
 ## API
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/user/register` | `username`,`password` 创建用户 |
-| POST | `/user/rename` | `id`,`new_username` 修改用户名 |
-| POST | `/user/changePassword` | `id`,`new_password` 修改密码 |
-| POST | `/user/findByID` | `id` 查询用户 |
-| POST | `/user/findByUsername` | `username` 查询用户 |
+| POST | `/account/register` | `username`,`password` 创建账号 |
+| POST | `/account/rename` | `id`,`new_username` 修改账号名 |
+| POST | `/account/changePassword` | `id`,`new_password` 修改密码 |
+| POST | `/account/findByID` | `id` 查询账号 |
+| POST | `/account/findByUsername` | `username` 查询账号 |
 
 - 接口统一使用 JSON 请求/响应。  
 - 启动时自动执行 `db.AutoMigrate`，保持用户表结构一致。  
