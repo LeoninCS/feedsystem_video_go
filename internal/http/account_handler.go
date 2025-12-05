@@ -1,4 +1,4 @@
-package account
+package http
 
 import (
 	"feedsystem_video_go/internal/account"
