@@ -4,60 +4,60 @@ import (
 	"gorm.io/gorm"
 )
 
-type UserRepository struct {
+type AccountRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) *UserRepository {
-	return &UserRepository{db: db}
+func NewAccountRepository(db *gorm.DB) *AccountRepository {
+	return &AccountRepository{db: db}
 }
 
-func (ur *UserRepository) CreateUser(user *User) error {
-	if err := ur.db.Create(user).Error; err != nil {
+func (ar *AccountRepository) CreateAccount(account *Account) error {
+	if err := ar.db.Create(account).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *UserRepository) RenameByID(id uint, newUsername string) error {
-	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("username", newUsername).Error; err != nil {
+func (ar *AccountRepository) RenameByID(id uint, newUsername string) error {
+	if err := ar.db.Model(&Account{}).Where("id = ?", id).Update("username", newUsername).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *UserRepository) ChangePassword(id uint, newPassword string) error {
-	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("password", newPassword).Error; err != nil {
+func (ar *AccountRepository) ChangePassword(id uint, newPassword string) error {
+	if err := ar.db.Model(&Account{}).Where("id = ?", id).Update("password", newPassword).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *UserRepository) FindByID(id uint) (*User, error) {
-	var user User
-	if err := ur.db.First(&user, id).Error; err != nil {
+func (ar *AccountRepository) FindByID(id uint) (*Account, error) {
+	var account Account
+	if err := ar.db.First(&account, id).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return &account, nil
 }
 
-func (ur *UserRepository) FindByUsername(username string) (*User, error) {
-	var user User
-	if err := ur.db.Where("username = ?", username).First(&user).Error; err != nil {
+func (ar *AccountRepository) FindByUsername(username string) (*Account, error) {
+	var account Account
+	if err := ar.db.Where("username = ?", username).First(&account).Error; err != nil {
 		return nil, err
 	}
-	return &user, nil
+	return &account, nil
 }
 
-func (ur *UserRepository) Login(id uint, token string) error {
-	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("token", token).Error; err != nil {
+func (ar *AccountRepository) Login(id uint, token string) error {
+	if err := ar.db.Model(&Account{}).Where("id = ?", id).Update("token", token).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ur *UserRepository) Logout(id uint, token string) error {
-	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("token", "").Error; err != nil {
+func (ar *AccountRepository) Logout(id uint, token string) error {
+	if err := ar.db.Model(&Account{}).Where("id = ?", id).Update("token", "").Error; err != nil {
 		return err
 	}
 	return nil

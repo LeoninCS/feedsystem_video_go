@@ -11,26 +11,26 @@ import (
 func SetRouter(db *gorm.DB) *gin.Engine {
 	r := gin.Default()
 
-	userRepository := account.NewUserRepository(db)
-	userService := account.NewUserService(userRepository)
-	userHandler := NewUserHandler(userService)
-	userGroup := r.Group("/user")
+	accountRepository := account.NewAccountRepository(db)
+	accountService := account.NewAccountService(accountRepository)
+	accountHandler := NewAccountHandler(accountService)
+	accountGroup := r.Group("/account")
 	{
-		userGroup.POST("/register", userHandler.CreateUser)
-		userGroup.POST("/rename", userHandler.RenameByID)
-		userGroup.POST("/changePassword", userHandler.ChangePassword)
-		userGroup.POST("/findByID", userHandler.FindByID)
-		userGroup.POST("/findByUsername", userHandler.FindByUsername)
+		accountGroup.POST("/register", accountHandler.CreateAccount)
+		accountGroup.POST("/rename", accountHandler.RenameByID)
+		accountGroup.POST("/changePassword", accountHandler.ChangePassword)
+		accountGroup.POST("/findByID", accountHandler.FindByID)
+		accountGroup.POST("/findByUsername", accountHandler.FindByUsername)
 	}
 	authGroup := r.Group("/auth")
 	{
-		authGroup.POST("/login", userHandler.Login)
+		authGroup.POST("/login", accountHandler.Login)
 	}
 
 	protectedAuthGroup := authGroup.Group("")
 	protectedAuthGroup.Use(middleware.JWTAuth())
 	{
-		protectedAuthGroup.POST("/logout", userHandler.Logout)
+		protectedAuthGroup.POST("/logout", accountHandler.Logout)
 	}
 
 	return r

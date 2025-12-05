@@ -33,7 +33,7 @@ func JWTAuth() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("userID", claims.UserID)
+		c.Set("accountID", claims.AccountID)
 		c.Set("username", claims.Username)
 
 		c.Next()

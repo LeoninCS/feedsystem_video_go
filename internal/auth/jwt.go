@@ -10,17 +10,17 @@ import (
 var secret = []byte("change-me-in-env")
 
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
+	AccountID uint   `json:"account_id"`
+	Username  string `json:"username"`
 	jwt.RegisteredClaims
 }
 
-func GenerateToken(userID uint, username string) (string, error) {
+func GenerateToken(accountID uint, username string) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
+		AccountID: accountID,
+		Username:  username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
 			IssuedAt:  jwt.NewNumericDate(now),

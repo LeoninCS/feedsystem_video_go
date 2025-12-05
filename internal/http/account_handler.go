@@ -6,16 +6,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-type UserHandler struct {
-	userService *account.UserService
+type AccountHandler struct {
+	accountService *account.AccountService
 }
 
-type CreateUserRequest struct {
+type CreateAccountRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
-type CreateUserResponse struct {
+type CreateAccountResponse struct {
 }
 
 type RenameByIDRequest struct {
@@ -66,86 +66,86 @@ type LogoutRequest struct {
 type LogoutResponse struct {
 }
 
-func NewUserHandler(userService *account.UserService) *UserHandler {
-	return &UserHandler{userService: userService}
+func NewAccountHandler(accountService *account.AccountService) *AccountHandler {
+	return &AccountHandler{accountService: accountService}
 }
-func (h *UserHandler) CreateUser(c *gin.Context) {
-	var req CreateUserRequest
+func (h *AccountHandler) CreateAccount(c *gin.Context) {
+	var req CreateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.CreateUser(&account.User{
+	if err := h.accountService.CreateAccount(&account.Account{
 		Username: req.Username,
 		Password: req.Password,
 	}); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "user created"})
+	c.JSON(200, gin.H{"message": "account created"})
 }
 
-func (h *UserHandler) RenameByID(c *gin.Context) {
+func (h *AccountHandler) RenameByID(c *gin.Context) {
 	var req RenameByIDRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.RenameByID(req.ID, req.NewUsername); err != nil {
+	if err := h.accountService.RenameByID(req.ID, req.NewUsername); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"message": "user renamed"})
+	c.JSON(200, gin.H{"message": "account renamed"})
 }
 
-func (h *UserHandler) ChangePassword(c *gin.Context) {
+func (h *AccountHandler) ChangePassword(c *gin.Context) {
 	var req ChangePasswordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.ChangePassword(req.Username, req.OldPassword, req.NewPassword); err != nil {
+	if err := h.accountService.ChangePassword(req.Username, req.OldPassword, req.NewPassword); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"message": "password changed"})
 }
 
-func (h *UserHandler) FindByID(c *gin.Context) {
+func (h *AccountHandler) FindByID(c *gin.Context) {
 	var req FindByIDRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if user, err := h.userService.FindByID(req.ID); err != nil {
+	if account, err := h.accountService.FindByID(req.ID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	} else {
-		c.JSON(200, user)
+		c.JSON(200, account)
 	}
 }
 
-func (h *UserHandler) FindByUsername(c *gin.Context) {
+func (h *AccountHandler) FindByUsername(c *gin.Context) {
 	var req FindByUsernameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if user, err := h.userService.FindByUsername(req.Username); err != nil {
+	if account, err := h.accountService.FindByUsername(req.Username); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	} else {
-		c.JSON(200, user)
+		c.JSON(200, account)
 	}
 }
 
-func (h *UserHandler) Login(c *gin.Context) {
+func (h *AccountHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if token, err := h.userService.Login(req.Username, req.Password); err != nil {
+	if token, err := h.accountService.Login(req.Username, req.Password); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	} else {
@@ -153,13 +153,13 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 }
 
-func (h *UserHandler) Logout(c *gin.Context) {
+func (h *AccountHandler) Logout(c *gin.Context) {
 	var req LogoutRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.Logout(req.ID); err != nil {
+	if err := h.accountService.Logout(req.ID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
