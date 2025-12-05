@@ -48,3 +48,17 @@ func (ur *UserRepository) FindByUsername(username string) (*User, error) {
 	}
 	return &user, nil
 }
+
+func (ur *UserRepository) Login(id uint, token string) error {
+	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("token", token).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ur *UserRepository) Logout(id uint, token string) error {
+	if err := ur.db.Model(&User{}).Where("id = ?", id).Update("token", "").Error; err != nil {
+		return err
+	}
+	return nil
+}

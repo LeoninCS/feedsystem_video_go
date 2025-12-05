@@ -53,6 +53,19 @@ type ChangePasswordRequest struct {
 type ChangePasswordResponse struct {
 }
 
+type LoginRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+type LoginResponse struct {
+	Token string `json:"token"`
+}
+type LogoutRequest struct {
+	ID uint `json:"id"`
+}
+type LogoutResponse struct {
+}
+
 func NewUserHandler(userService *account.UserService) *UserHandler {
 	return &UserHandler{userService: userService}
 }
@@ -91,7 +104,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.userService.ChangePassword(req.ID, req.NewPassword); err != nil {
+	if err := h.userService.ChangePassword(req.Username, req.OldPassword, req.NewPassword); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
@@ -124,4 +137,31 @@ func (h *UserHandler) FindByUsername(c *gin.Context) {
 	} else {
 		c.JSON(200, user)
 	}
+}
+
+func (h *UserHandler) Login(c *gin.Context) {
+	var req LoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if token, err := h.userService.Login(req.Username, req.Password); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	} else {
+		c.JSON(200, LoginResponse{Token: token})
+	}
+}
+
+func (h *UserHandler) Logout(c *gin.Context) {
+	var req LogoutRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if err := h.userService.Logout(req.ID); err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, LogoutResponse{})
 }

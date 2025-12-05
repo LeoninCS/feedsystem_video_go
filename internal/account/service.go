@@ -1,6 +1,11 @@
 package account
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"errors"
+	"feedsystem_video_go/internal/auth"
+
+	"golang.org/x/crypto/bcrypt"
+)
 
 type UserService struct {
 	userRepository *UserRepository
@@ -61,4 +66,35 @@ func (us *UserService) FindByUsername(username string) (*User, error) {
 	} else {
 		return user, nil
 	}
+}
+
+func (us *UserService) Login(username, password string) (string, error) {
+	user, err := us.FindByUsername(username)
+	if err != nil {
+		return "", err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password)); err != nil {
+		return "", err
+	}
+	// generate token
+	token, err := auth.GenerateToken(user.ID, user.Username)
+	if err != nil {
+		return "", err
+	}
+	if err := us.userRepository.Login(user.ID, token); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (us *UserService) Logout(userID uint) error {
+	user, err := us.FindByID(userID)
+	if err != nil {
+		return err
+	}
+	if user.Token == "" {
+		return errors.New("user already logged out")
+	}
+	return us.userRepository.Logout(user.ID, user.Token)
 }
