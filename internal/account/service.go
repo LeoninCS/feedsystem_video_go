@@ -1,5 +1,7 @@
 package account
 
+import "golang.org/x/crypto/bcrypt"
+
 type UserService struct {
 	userRepository *UserRepository
 }
@@ -9,6 +11,11 @@ func NewUserService(userRepository *UserRepository) *UserService {
 }
 
 func (us *UserService) CreateUser(user *User) error {
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	user.Password = string(passwordHash)
 	if err := us.userRepository.CreateUser(user); err != nil {
 		return err
 	}
