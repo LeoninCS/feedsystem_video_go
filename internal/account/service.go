@@ -29,8 +29,19 @@ func (us *UserService) RenameByID(id uint, newUsername string) error {
 	return nil
 }
 
-func (us *UserService) ChangePassword(id uint, newPassword string) error {
-	if err := us.userRepository.ChangePassword(id, newPassword); err != nil {
+func (us *UserService) ChangePassword(username, oldPassword, newPassword string) error {
+	user, err := us.FindByUsername(username)
+	if err != nil {
+		return err
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(oldPassword)); err != nil {
+		return err
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	if err := us.userRepository.ChangePassword(user.ID, string(passwordHash)); err != nil {
 		return err
 	}
 	return nil
