@@ -43,14 +43,14 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "play url is required"})
 		return
 	}
-	uidValue, exists := c.Get("account_id")
+	uidValue, exists := c.Get("accountID")
 	if !exists {
-		c.JSON(400, gin.H{"error": "account_id not found"})
+		c.JSON(400, gin.H{"error": "accountID not found"})
 		return
 	}
 	authorID, ok := uidValue.(uint)
 	if !ok {
-		c.JSON(400, gin.H{"error": "account_id has invalid type"})
+		c.JSON(400, gin.H{"error": "accountID has invalid type"})
 		return
 	}
 	video := &video.Video{
