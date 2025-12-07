@@ -2,6 +2,7 @@ package http
 
 import (
 	"feedsystem_video_go/internal/account"
+	"feedsystem_video_go/internal/feed"
 	"feedsystem_video_go/internal/middleware"
 	"feedsystem_video_go/internal/video"
 
@@ -44,5 +45,13 @@ func SetRouter(db *gorm.DB) *gin.Engine {
 		protectedVideoGroup.POST("/publish", videoHandler.PublishVideo)
 	}
 
+	// feed
+	feedRepository := feed.NewFeedRepository(db)
+	feedService := feed.NewFeedService(feedRepository)
+	feedHandler := NewFeedHandler(feedService)
+	feedGroup := r.Group("/feed")
+	{
+		feedGroup.POST("/listLatest", feedHandler.ListLatest)
+	}
 	return r
 }
