@@ -1,17 +1,16 @@
-package http
+package video
 
 import (
-	"feedsystem_video_go/internal/video"
 	"time"
 
 	"github.com/gin-gonic/gin"
 )
 
 type VideoHandler struct {
-	service *video.VideoService
+	service *VideoService
 }
 
-func NewVideoHandler(service *video.VideoService) *VideoHandler {
+func NewVideoHandler(service *VideoService) *VideoHandler {
 	return &VideoHandler{service: service}
 }
 
@@ -53,7 +52,7 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "accountID has invalid type"})
 		return
 	}
-	video := &video.Video{
+	video := &Video{
 		AuthorID:    authorID,
 		Title:       req.Title,
 		Description: req.Description,

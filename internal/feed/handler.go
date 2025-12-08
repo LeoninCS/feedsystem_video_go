@@ -1,7 +1,6 @@
-package http
+package feed
 
 import (
-	"feedsystem_video_go/internal/feed"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,10 +12,10 @@ type ListLatestRequest struct {
 }
 
 type FeedHandler struct {
-	service *feed.FeedService
+	service *FeedService
 }
 
-func NewFeedHandler(service *feed.FeedService) *FeedHandler {
+func NewFeedHandler(service *FeedService) *FeedHandler {
 	return &FeedHandler{service: service}
 }
 
