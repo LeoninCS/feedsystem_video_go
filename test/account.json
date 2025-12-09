@@ -10,15 +10,25 @@
       "name": "Register Account",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
         },
         "url": {
           "raw": "{{host}}/account/register",
-          "host": ["{{host}}"],
-          "path": ["account", "register"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "register"
+          ]
         }
       }
     },
@@ -26,15 +36,25 @@
       "name": "Login",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}"
         },
         "url": {
           "raw": "{{host}}/account/login",
-          "host": ["{{host}}"],
-          "path": ["account", "login"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "login"
+          ]
         }
       }
     },
@@ -42,15 +62,29 @@
       "name": "Change Password",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"username\": \"{{username}}\",\n  \"old_password\": \"{{password}}\",\n  \"new_password\": \"{{newPassword}}\"\n}"
+          "raw": "{\n  \"old_password\": \"{{password}}\",\n  \"new_password\": \"{{newPassword}}\"\n}"
         },
         "url": {
           "raw": "{{host}}/account/changePassword",
-          "host": ["{{host}}"],
-          "path": ["account", "changePassword"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "changePassword"
+          ]
         }
       }
     },
@@ -58,15 +92,29 @@
       "name": "Find Account By ID",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"id\": {{accountId}}\n}"
         },
         "url": {
           "raw": "{{host}}/account/findByID",
-          "host": ["{{host}}"],
-          "path": ["account", "findByID"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "findByID"
+          ]
         }
       }
     },
@@ -74,15 +122,29 @@
       "name": "Find Account By Username",
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"username\": \"{{username}}\"\n}"
         },
         "url": {
           "raw": "{{host}}/account/findByUsername",
-          "host": ["{{host}}"],
-          "path": ["account", "findByUsername"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "findByUsername"
+          ]
         }
       }
     },
@@ -91,17 +153,28 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"id\": {{accountId}},\n  \"new_username\": \"{{newUsername}}\"\n}"
+          "raw": "{\n  \"new_username\": \"{{newUsername}}\"\n}"
         },
         "url": {
           "raw": "{{host}}/account/rename",
-          "host": ["{{host}}"],
-          "path": ["account", "rename"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "rename"
+          ]
         }
       }
     },
@@ -110,28 +183,60 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}"
+          }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"id\": {{accountId}}\n}"
+          "raw": "{}"
         },
         "url": {
           "raw": "{{host}}/account/logout",
-          "host": ["{{host}}"],
-          "path": ["account", "logout"]
+          "host": [
+            "{{host}}"
+          ],
+          "path": [
+            "account",
+            "logout"
+          ]
         }
       }
     }
   ],
   "variable": [
-    { "key": "host", "value": "http://localhost:8080" },
-    { "key": "username", "value": "alice" },
-    { "key": "password", "value": "pass123" },
-    { "key": "newPassword", "value": "newpass456" },
-    { "key": "newUsername", "value": "alice_new" },
-    { "key": "accountId", "value": "1" },
-    { "key": "jwt_token", "value": "" }
+    {
+      "key": "host",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "username",
+      "value": "alice"
+    },
+    {
+      "key": "password",
+      "value": "pass123"
+    },
+    {
+      "key": "newPassword",
+      "value": "newpass456"
+    },
+    {
+      "key": "newUsername",
+      "value": "alice_new"
+    },
+    {
+      "key": "accountId",
+      "value": "1"
+    },
+    {
+      "key": "jwt_token",
+      "value": ""
+    }
   ]
 }
