@@ -92,10 +92,10 @@ func (h *AccountHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 	if err := h.accountService.ChangePassword(c.Request.Context(), req.Username, req.OldPassword, req.NewPassword); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": "unsuccessfully password changed"})
 		return
 	}
-	c.JSON(200, gin.H{"message": "password changed"})
+	c.JSON(200, gin.H{"message": "successfully password changed"})
 }
 
 func (h *AccountHandler) FindByID(c *gin.Context) {
