@@ -15,15 +15,8 @@ type CreateAccountRequest struct {
 	Password string `json:"password"`
 }
 
-type CreateAccountResponse struct {
-}
-
-type RenameByIDRequest struct {
-	ID          uint   `json:"id"`
+type RenameRequest struct {
 	NewUsername string `json:"new_username"`
-}
-
-type RenameByIDResponse struct {
 }
 
 type FindByIDRequest struct {
@@ -50,20 +43,9 @@ type ChangePasswordRequest struct {
 	NewPassword string `json:"new_password"`
 }
 
-type ChangePasswordResponse struct {
-}
-
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
-}
-type LoginResponse struct {
-	Token string `json:"token"`
-}
-type LogoutRequest struct {
-	ID uint `json:"id"`
-}
-type LogoutResponse struct {
 }
 
 func NewAccountHandler(accountService *AccountService) *AccountHandler {
@@ -86,7 +68,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 }
 
 func (h *AccountHandler) Rename(c *gin.Context) {
-	var req RenameByIDRequest
+	var req RenameRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -154,21 +136,21 @@ func (h *AccountHandler) Login(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	} else {
-		c.JSON(200, LoginResponse{Token: token})
+		c.JSON(200, gin.H{"token": token})
 	}
 }
 
 func (h *AccountHandler) Logout(c *gin.Context) {
-	var req LogoutRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
+	accountID, err := getAccountID(c)
+	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if err := h.accountService.Logout(req.ID); err != nil {
+	if err := h.accountService.Logout(accountID); err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, LogoutResponse{})
+	c.JSON(200, gin.H{"message": "account logged out"})
 }
 
 func getAccountID(c *gin.Context) (uint, error) {

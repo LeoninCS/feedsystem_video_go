@@ -28,7 +28,7 @@ func SetRouter(db *gorm.DB) *gin.Engine {
 	protectedAccountGroup.Use(middleware.JWTAuth(accountRepository))
 	{
 		protectedAccountGroup.POST("/logout", accountHandler.Logout)
-		protectedAccountGroup.POST("/rename", accountHandler.RenameByID)
+		protectedAccountGroup.POST("/rename", accountHandler.Rename)
 	}
 	// video
 	videoRepository := video.NewVideoRepository(db)
