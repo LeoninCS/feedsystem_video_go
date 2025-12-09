@@ -46,7 +46,7 @@ func SetRouter(db *gorm.DB) *gin.Engine {
 	}
 	// like
 	likeRepository := video.NewLikeRepository(db)
-	likeService := video.NewLikeService(likeRepository)
+	likeService := video.NewLikeService(likeRepository, videoRepository)
 	likeHandler := video.NewLikeHandler(likeService)
 	likeGroup := r.Group("/like")
 	{

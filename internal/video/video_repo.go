@@ -40,3 +40,12 @@ func (vr *VideoRepository) GetByID(ctx context.Context, id uint) (*Video, error)
 	}
 	return &video, nil
 }
+
+func (vr *VideoRepository) UpdateLikesCount(ctx context.Context, id uint, likesCount int64) error {
+	if err := vr.db.WithContext(ctx).Model(&Video{}).
+		Where("id = ?", id).
+		Update("likes_count", likesCount).Error; err != nil {
+		return err
+	}
+	return nil
+}

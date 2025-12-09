@@ -20,6 +20,9 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 	if video.PlayURL == "" {
 		return errors.New("play url is required")
 	}
+	if video.CoverURL == "" {
+		return errors.New("cover url is required")
+	}
 	if err := vs.repo.CreateVideo(ctx, video); err != nil {
 		return err
 	}
@@ -40,4 +43,11 @@ func (vs *VideoService) GetDetail(ctx context.Context, id uint) (*Video, error) 
 		return nil, err
 	}
 	return video, nil
+}
+
+func (vs *VideoService) UpdateLikesCount(ctx context.Context, id uint, likesCount int64) error {
+	if err := vs.repo.UpdateLikesCount(ctx, id, likesCount); err != nil {
+		return err
+	}
+	return nil
 }
