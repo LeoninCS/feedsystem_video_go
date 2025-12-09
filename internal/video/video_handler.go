@@ -34,14 +34,7 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	if req.Title == "" {
-		c.JSON(400, gin.H{"error": "title is required"})
-		return
-	}
-	if req.PlayURL == "" {
-		c.JSON(400, gin.H{"error": "play url is required"})
-		return
-	}
+
 	uidValue, exists := c.Get("accountID")
 	if !exists {
 		c.JSON(400, gin.H{"error": "accountID not found"})
@@ -59,7 +52,7 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		PlayURL:     req.PlayURL,
 		CreateTime:  time.Now(),
 	}
-	if err := vh.service.Publish(c, video); err != nil {
+	if err := vh.service.Publish(c.Request.Context(), video); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
@@ -72,7 +65,7 @@ func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	videos, err := vh.service.ListByAuthorID(c, req.AuthorID)
+	videos, err := vh.service.ListByAuthorID(c.Request.Context(), req.AuthorID)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -86,7 +79,7 @@ func (vh *VideoHandler) GetDetail(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	video, err := vh.service.GetDetail(c, req.ID)
+	video, err := vh.service.GetDetail(c.Request.Context(), req.ID)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
