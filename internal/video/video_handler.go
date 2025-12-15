@@ -3,35 +3,18 @@ package video
 import (
 	"time"
 
+	"feedsystem_video_go/internal/account"
+
 	"github.com/gin-gonic/gin"
 )
 
 type VideoHandler struct {
-	service *VideoService
+	service        *VideoService
+	accountService *account.AccountService
 }
 
-func NewVideoHandler(service *VideoService) *VideoHandler {
-	return &VideoHandler{service: service}
-}
-
-type PublishVideoRequest struct {
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	PlayURL     string `json:"play_url"`
-	CoverURL    string `json:"cover_url"`
-}
-
-type ListByAuthorIDRequest struct {
-	AuthorID uint `json:"author_id"`
-}
-
-type GetDetailRequest struct {
-	ID uint `json:"id"`
-}
-
-type UpdateLikesCountRequest struct {
-	ID         uint  `json:"id"`
-	LikesCount int64 `json:"likes_count"`
+func NewVideoHandler(service *VideoService, accountService *account.AccountService) *VideoHandler {
+	return &VideoHandler{service: service, accountService: accountService}
 }
 
 func (vh *VideoHandler) PublishVideo(c *gin.Context) {
@@ -51,8 +34,14 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		c.JSON(400, gin.H{"error": "accountID has invalid type"})
 		return
 	}
+	user, err := vh.accountService.FindByID(c.Request.Context(), authorID)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	video := &Video{
 		AuthorID:    authorID,
+		Username:    user.Username,
 		Title:       req.Title,
 		Description: req.Description,
 		PlayURL:     req.PlayURL,
