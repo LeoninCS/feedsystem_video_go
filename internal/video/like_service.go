@@ -16,7 +16,19 @@ func NewLikeService(repo *LikeRepository, videoRepo *VideoRepository) *LikeServi
 }
 
 func (s *LikeService) Like(ctx context.Context, like *Like) error {
-	if isLiked, err := s.IsLiked(ctx, like.VideoID, like.AccountID); err == nil && isLiked {
+	exists, err := s.VideoRepo.IsExist(ctx, like.VideoID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("video not found")
+	}
+
+	isLiked, err := s.IsLiked(ctx, like.VideoID, like.AccountID)
+	if err != nil {
+		return err
+	}
+	if isLiked {
 		return errors.New("user has liked this video")
 	}
 	like.CreatedAt = time.Now()
@@ -34,7 +46,19 @@ func (s *LikeService) Like(ctx context.Context, like *Like) error {
 }
 
 func (s *LikeService) Unlike(ctx context.Context, like *Like) error {
-	if isLiked, err := s.IsLiked(ctx, like.VideoID, like.AccountID); err == nil && !isLiked {
+	exists, err := s.VideoRepo.IsExist(ctx, like.VideoID)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("video not found")
+	}
+
+	isLiked, err := s.IsLiked(ctx, like.VideoID, like.AccountID)
+	if err != nil {
+		return err
+	}
+	if !isLiked {
 		return errors.New("user has not liked this video")
 	}
 	if err := s.repo.Unlike(ctx, like); err != nil {
