@@ -21,6 +21,13 @@ func (vr *VideoRepository) CreateVideo(ctx context.Context, video *Video) error 
 	return nil
 }
 
+func (vr *VideoRepository) DeleteVideo(ctx context.Context, id uint) error {
+	if err := vr.db.WithContext(ctx).Delete(&Video{}, id).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (vr *VideoRepository) ListByAuthorID(ctx context.Context, authorID int64) ([]Video, error) {
 	var videos []Video
 	if err := vr.db.WithContext(ctx).
@@ -48,4 +55,15 @@ func (vr *VideoRepository) UpdateLikesCount(ctx context.Context, id uint, likesC
 		return err
 	}
 	return nil
+}
+
+func (vr *VideoRepository) IsExist(ctx context.Context, id uint) (bool, error) {
+	var video Video
+	if err := vr.db.WithContext(ctx).First(&video, id).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }

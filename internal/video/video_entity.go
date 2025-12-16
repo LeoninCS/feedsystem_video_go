@@ -3,14 +3,14 @@ package video
 import "time"
 
 type Video struct {
-	ID          uint      `gorm:"primaryKey"`
-	AuthorID    uint      `gorm:"index;not null"`
-	Username    string    `gorm:"type:varchar(255);not null"`
-	Title       string    `gorm:"type:varchar(255);not null"`
-	Description string    `gorm:"type:varchar(255);"`
-	PlayURL     string    `gorm:"type:varchar(255);not null"`
-	CoverURL    string    `gorm:"type:varchar(255);not null"`
-	CreateTime  time.Time `gorm:"autoCreateTime"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	AuthorID    uint      `gorm:"index;not null" json:"author_id"`
+	Username    string    `gorm:"type:varchar(255);not null" json:"username"`
+	Title       string    `gorm:"type:varchar(255);not null" json:"title"`
+	Description string    `gorm:"type:varchar(255);" json:"description,omitempty"`
+	PlayURL     string    `gorm:"type:varchar(255);not null" json:"play_url"`
+	CoverURL    string    `gorm:"type:varchar(255);not null" json:"cover_url"`
+	CreateTime  time.Time `gorm:"autoCreateTime" json:"create_time"`
 	LikesCount  int64     `gorm:"column:likes_count;not null;default:0" json:"likes_count"`
 }
 
@@ -19,6 +19,10 @@ type PublishVideoRequest struct {
 	Description string `json:"description"`
 	PlayURL     string `json:"play_url"`
 	CoverURL    string `json:"cover_url"`
+}
+
+type DeleteVideoRequest struct {
+	ID uint `json:"id"`
 }
 
 type ListByAuthorIDRequest struct {

@@ -29,6 +29,20 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 	return nil
 }
 
+func (vs *VideoService) Delete(ctx context.Context, id uint, authorID uint) error {
+	video, err := vs.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if video.AuthorID != authorID {
+		return errors.New("unauthorized")
+	}
+	if err := vs.repo.DeleteVideo(ctx, id); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (vs *VideoService) ListByAuthorID(ctx context.Context, authorID uint) ([]Video, error) {
 	videos, err := vs.repo.ListByAuthorID(ctx, int64(authorID))
 	if err != nil {

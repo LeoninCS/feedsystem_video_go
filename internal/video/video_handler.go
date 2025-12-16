@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"feedsystem_video_go/internal/account"
+	"feedsystem_video_go/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,23 +25,18 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		return
 	}
 
-	uidValue, exists := c.Get("accountID")
-	if !exists {
-		c.JSON(400, gin.H{"error": "accountID not found"})
+	authorId, err := middleware.GetAccountID(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	authorID, ok := uidValue.(uint)
-	if !ok {
-		c.JSON(400, gin.H{"error": "accountID has invalid type"})
-		return
-	}
-	user, err := vh.accountService.FindByID(c.Request.Context(), authorID)
+	user, err := vh.accountService.FindByID(c.Request.Context(), authorId)
 	if err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 	video := &Video{
-		AuthorID:    authorID,
+		AuthorID:    authorId,
 		Username:    user.Username,
 		Title:       req.Title,
 		Description: req.Description,
@@ -53,6 +49,24 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		return
 	}
 	c.JSON(200, video)
+}
+
+func (vh *VideoHandler) DeleteVideo(c *gin.Context) {
+	var req DeleteVideoRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	authorId, err := middleware.GetAccountID(c)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if err := vh.service.Delete(c.Request.Context(), req.ID, authorId); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"message": "video deleted"})
 }
 
 func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
