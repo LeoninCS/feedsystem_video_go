@@ -2,7 +2,7 @@
   "info": {
     "name": "FeedSystem Feed API",
     "_postman_id": "4c2fd555-b880-4b14-8023-55a944936352",
-    "description": "Feed endpoints.\n\nPagination:\n- /feed/listLatest: copy response.next_time into feedLatestTime\n- /feed/listLikesCount: copy response.next_likes_count_before into feedLikesCountBefore",
+    "description": "Feed endpoints.\n\nPagination:\n- /feed/listLatest: copy response.next_time (unix seconds) into feedLatestTime\n- /feed/listLikesCount: copy response.next_likes_count_before into feedLikesCountBefore",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [

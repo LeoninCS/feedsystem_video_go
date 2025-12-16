@@ -2,7 +2,7 @@ package feed
 
 import (
 	"context"
-	"feedsystem_video_go/internal/video" // 引入视频实体
+	"feedsystem_video_go/internal/video"
 	"time"
 
 	"gorm.io/gorm"
@@ -32,9 +32,9 @@ func (repo *FeedRepository) ListLatest(ctx context.Context, limit int, latestBef
 func (repo *FeedRepository) ListLikesCount(ctx context.Context, limit int, likesCountBefore int64) ([]video.Video, error) {
 	var videos []video.Video
 	query := repo.db.WithContext(ctx).Model(&video.Video{}).
-		Order("like_count DESC")
+		Order("likes_count DESC")
 	if likesCountBefore > 0 {
-		query = query.Where("like_count < ?", likesCountBefore)
+		query = query.Where("likes_count < ?", likesCountBefore)
 	}
 	if err := query.Limit(limit).Find(&videos).Error; err != nil {
 		return nil, err

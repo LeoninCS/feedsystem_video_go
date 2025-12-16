@@ -48,7 +48,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"demo video\",\n  \"description\": \"manual request\",\n  \"play_url\": \"http://example.com/demo.mp4\"\n}"
+          "raw": "{\n  \"title\": \"demo video\",\n  \"description\": \"manual request\",\n  \"play_url\": \"http://example.com/demo.mp4\",\n  \"cover_url\": \"http://example.com/demo.jpg\"\n}"
         },
         "url": {
           "raw": "{{host}}/video/publish",
