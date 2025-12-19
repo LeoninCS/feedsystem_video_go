@@ -2,7 +2,7 @@
   "info": {
     "name": "FeedSystem API (All-in-One)",
     "_postman_id": "1a41aef7-6f8a-4bc4-8f55-0c6b12b930d2",
-    "description": "All endpoints in one collection.\n\nSuggested run order:\n1) Account/Register\n2) Account/Login (auto-saves jwt_token)\n3) Account/Find By Username (auto-saves accountId)\n4) Video/Publish (auto-saves videoId)\n5) Like/* (optional)\n6) Feed/* (optional; copy next fields for pagination)\n\nNotes:\n- JWT protected endpoints require Authorization: Bearer {{jwt_token}}.\n- Pagination vars:\n  - /feed/listLatest: response.next_time (unix seconds) -> feedLatestTime\n  - /feed/listLikesCount: response.next_likes_count_before -> feedLikesCountBefore",
+    "description": "All endpoints in one collection.\n\nSuggested run order:\n1) Account/Register\n2) Account/Login (auto-saves jwt_token)\n3) Account/Find By Username (auto-saves accountId)\n4) Social/* (optional)\n5) Video/Publish (auto-saves videoId)\n6) Like/* (optional)\n7) Feed/* (optional; copy next fields for pagination)\n\nNotes:\n- JWT protected endpoints require Authorization: Bearer {{jwt_token}}.\n- Pagination vars:\n  - /feed/listLatest: response.next_time (unix seconds) -> feedLatestTime\n  - /feed/listLikesCount: response.next_likes_count_before -> feedLikesCountBefore",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "event": [
@@ -22,8 +22,10 @@
           "ensure(\"newUsername\", `user_renamed_${Date.now()}`);",
           "ensure(\"jwt_token\", \"\");",
           "ensure(\"accountId\", \"1\");",
+          "ensure(\"vloggerId\", \"1\");",
           "ensure(\"authorId\", \"1\");",
           "ensure(\"videoId\", \"1\");",
+          "ensure(\"publishedVideoId\", \"\");",
           "ensure(\"feedLimit\", \"10\");",
           "ensure(\"feedLatestTime\", \"0\");",
           "ensure(\"feedLikesCountBefore\", \"0\");",
@@ -96,6 +98,7 @@
                   "let json = {};",
                   "try { json = pm.response.json(); } catch (e) {}",
                   "if (json && json.id) pm.collectionVariables.set(\"accountId\", String(json.id));",
+                  "if (json && json.id) pm.collectionVariables.set(\"vloggerId\", String(json.id));",
                   "pm.test(\"FindByUsername returns id\", function () {",
                   "  pm.expect(json).to.have.property(\"id\");",
                   "});"
@@ -203,6 +206,147 @@
       ]
     },
     {
+      "name": "Social",
+      "item": [
+        {
+          "name": "Follow (JWT protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "pm.test(\"Follow returns message\", function () {",
+                  "  pm.expect(json).to.have.property(\"message\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vlogger_id\": {{vloggerId}}\n}" },
+            "url": {
+              "raw": "{{host}}/social/follow",
+              "host": ["{{host}}"],
+              "path": ["social", "follow"]
+            }
+          }
+        },
+        {
+          "name": "Get All Followers (JWT protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "pm.test(\"GetAllFollowers returns array\", function () {",
+                  "  pm.expect(json).to.have.property(\"followers\");",
+                  "  pm.expect(json.followers).to.be.an(\"array\");",
+                  "});",
+                  "pm.test(\"Followers contains current account\", function () {",
+                  "  const accountId = pm.collectionVariables.get(\"accountId\");",
+                  "  const ids = (json.followers || []).map(x => String(x && x.id));",
+                  "  pm.expect(ids).to.include(accountId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{host}}/social/getAllFollowers",
+              "host": ["{{host}}"],
+              "path": ["social", "getAllFollowers"]
+            }
+          }
+        },
+        {
+          "name": "Get All Vloggers (JWT protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "pm.test(\"GetAllVloggers returns array\", function () {",
+                  "  pm.expect(json).to.have.property(\"vloggers\");",
+                  "  pm.expect(json.vloggers).to.be.an(\"array\");",
+                  "});",
+                  "pm.test(\"Vloggers contains current account\", function () {",
+                  "  const accountId = pm.collectionVariables.get(\"accountId\");",
+                  "  const ids = (json.vloggers || []).map(x => String(x && x.id));",
+                  "  pm.expect(ids).to.include(accountId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{}" },
+            "url": {
+              "raw": "{{host}}/social/getAllVloggers",
+              "host": ["{{host}}"],
+              "path": ["social", "getAllVloggers"]
+            }
+          }
+        },
+        {
+          "name": "Unfollow (JWT protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "pm.test(\"Unfollow returns message\", function () {",
+                  "  pm.expect(json).to.have.property(\"message\");",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"vlogger_id\": {{vloggerId}}\n}" },
+            "url": {
+              "raw": "{{host}}/social/unfollow",
+              "host": ["{{host}}"],
+              "path": ["social", "unfollow"]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Video",
       "item": [
         {
@@ -216,6 +360,7 @@
                   "let json = {};",
                   "try { json = pm.response.json(); } catch (e) {}",
                   "if (json && json.id) pm.collectionVariables.set(\"videoId\", String(json.id));",
+                  "if (json && json.id) pm.collectionVariables.set(\"publishedVideoId\", String(json.id));",
                   "if (json && json.author_id) pm.collectionVariables.set(\"authorId\", String(json.author_id));",
                   "pm.test(\"Publish returns id\", function () {",
                   "  pm.expect(json).to.have.property(\"id\");",
@@ -408,6 +553,46 @@
       "name": "Feed",
       "item": [
         {
+          "name": "List By Following (JWT protected)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) {}",
+                  "pm.test(\"ListByFollowing returns shape\", function () {",
+                  "  pm.expect(json).to.have.property(\"video_list\");",
+                  "  pm.expect(json.video_list).to.be.an(\"array\");",
+                  "  pm.expect(json).to.have.property(\"next_time\");",
+                  "  pm.expect(json).to.have.property(\"has_more\");",
+                  "});",
+                  "pm.test(\"ListByFollowing contains published video (if any)\", function () {",
+                  "  const publishedVideoId = pm.collectionVariables.get(\"publishedVideoId\");",
+                  "  if (!publishedVideoId) return;",
+                  "  const ids = (json.video_list || []).map(x => String(x && x.id));",
+                  "  pm.expect(ids).to.include(String(publishedVideoId));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{jwt_token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"limit\": {{feedLimit}}\n}" },
+            "url": {
+              "raw": "{{host}}/feed/listByFollowing",
+              "host": ["{{host}}"],
+              "path": ["feed", "listByFollowing"]
+            }
+          }
+        },
+        {
           "name": "List Latest Feed (save feedLatestTime)",
           "event": [
             {
@@ -476,8 +661,10 @@
     { "key": "newUsername", "value": "" },
     { "key": "jwt_token", "value": "" },
     { "key": "accountId", "value": "" },
+    { "key": "vloggerId", "value": "" },
     { "key": "authorId", "value": "" },
     { "key": "videoId", "value": "" },
+    { "key": "publishedVideoId", "value": "" },
     { "key": "feedLimit", "value": "10" },
     { "key": "feedLatestTime", "value": "0" },
     { "key": "feedLikesCountBefore", "value": "0" },
