@@ -4,6 +4,7 @@ import (
 	"feedsystem_video_go/internal/account"
 	"feedsystem_video_go/internal/feed"
 	"feedsystem_video_go/internal/middleware"
+	rediscache "feedsystem_video_go/internal/redis"
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
 
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetRouter(db *gorm.DB) *gin.Engine {
+func SetRouter(db *gorm.DB, cache *rediscache.Client) *gin.Engine {
 	r := gin.Default()
 	// account
 	accountRepository := account.NewAccountRepository(db)
@@ -50,9 +51,6 @@ func SetRouter(db *gorm.DB) *gin.Engine {
 	likeService := video.NewLikeService(likeRepository, videoRepository)
 	likeHandler := video.NewLikeHandler(likeService)
 	likeGroup := r.Group("/like")
-	{
-		likeGroup.POST("/getLikesCount", likeHandler.GetLikesCount)
-	}
 	protectedLikeGroup := likeGroup.Group("")
 	protectedLikeGroup.Use(middleware.JWTAuth(accountRepository))
 	{
@@ -89,7 +87,7 @@ func SetRouter(db *gorm.DB) *gin.Engine {
 	}
 	// feed
 	feedRepository := feed.NewFeedRepository(db)
-	feedService := feed.NewFeedService(feedRepository, likeRepository)
+	feedService := feed.NewFeedService(feedRepository, likeRepository, cache)
 	feedHandler := feed.NewFeedHandler(feedService)
 	feedGroup := r.Group("/feed")
 	feedGroup.Use(middleware.SoftJWTAuth(accountRepository))

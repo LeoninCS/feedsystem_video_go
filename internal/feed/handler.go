@@ -49,11 +49,38 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 	if req.Limit <= 0 || req.Limit > 50 {
 		req.Limit = 10
 	}
+
+	var cursor *LikesCountCursor
+	if req.LikesCountBefore != nil || req.IDBefore != nil {
+		if req.LikesCountBefore == nil || req.IDBefore == nil {
+			c.JSON(400, gin.H{"error": "likes_count_before and id_before must be provided together"})
+			return
+		}
+
+		likesCountBefore := *req.LikesCountBefore
+		idBefore := *req.IDBefore
+
+		if likesCountBefore < 0 {
+			c.JSON(400, gin.H{"error": "invalid cursor: likes_count_before must be >= 0"})
+			return
+		}
+		if idBefore == 0 {
+			if likesCountBefore != 0 {
+				c.JSON(400, gin.H{"error": "invalid cursor: id_before must be > 0"})
+				return
+			}
+		} else {
+			cursor = &LikesCountCursor{
+				LikesCount: likesCountBefore,
+				ID:         idBefore,
+			}
+		}
+	}
 	viewerAccountID, err := middleware.GetAccountID(c)
 	if err != nil {
 		viewerAccountID = 0
 	}
-	feedItems, err := f.service.ListLikesCount(c.Request.Context(), req.Limit, req.LikesCount, viewerAccountID)
+	feedItems, err := f.service.ListLikesCount(c.Request.Context(), req.Limit, cursor, viewerAccountID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

@@ -2,20 +2,45 @@ package feed
 
 import (
 	"context"
+	"encoding/json"
 	"feedsystem_video_go/internal/video"
+	"fmt"
+	rediscache "feedsystem_video_go/internal/redis"
 	"time"
 )
 
 type FeedService struct {
 	repo     *FeedRepository
 	likeRepo *video.LikeRepository
+	cache    *rediscache.Client
+	cacheTTL time.Duration
 }
 
-func NewFeedService(repo *FeedRepository, likeRepo *video.LikeRepository) *FeedService {
-	return &FeedService{repo: repo, likeRepo: likeRepo}
+func NewFeedService(repo *FeedRepository, likeRepo *video.LikeRepository, cache *rediscache.Client) *FeedService {
+	return &FeedService{repo: repo, likeRepo: likeRepo, cache: cache, cacheTTL: 5 * time.Second}
 }
 
 func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
+	var cacheKey string
+	if viewerAccountID == 0 && f.cache != nil {
+		before := int64(0)
+		if !latestBefore.IsZero() {
+			before = latestBefore.Unix()
+		}
+		cacheKey = fmt.Sprintf("feed:listLatest:limit=%d:before=%d", limit, before)
+
+		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		defer cancel()
+
+		b, err := f.cache.GetBytes(cacheCtx, cacheKey)
+		if err == nil {
+			var cached ListLatestResponse
+			if err := json.Unmarshal(b, &cached); err == nil {
+				return cached, nil
+			}
+		}
+	}
+
 	videos, err := f.repo.ListLatest(ctx, limit, latestBefore)
 	if err != nil {
 		return ListLatestResponse{}, err
@@ -55,19 +80,21 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 		NextTime:  nextTime,
 		HasMore:   hasMore,
 	}
+
+	if cacheKey != "" {
+		if b, err := json.Marshal(resp); err == nil {
+			cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+			defer cancel()
+			_ = f.cache.SetBytes(cacheCtx, cacheKey, b, f.cacheTTL)
+		}
+	}
 	return resp, nil
 }
 
-func (f *FeedService) ListLikesCount(ctx context.Context, limit int, likesCountBefore int64, viewerAccountID uint) (ListLikesCountResponse, error) {
-	videos, err := f.repo.ListLikesCount(ctx, limit, likesCountBefore)
+func (f *FeedService) ListLikesCount(ctx context.Context, limit int, cursor *LikesCountCursor, viewerAccountID uint) (ListLikesCountResponse, error) {
+	videos, err := f.repo.ListLikesCountWithCursor(ctx, limit, cursor)
 	if err != nil {
 		return ListLikesCountResponse{}, err
-	}
-	var nextLikesCountBefore int64
-	if len(videos) > 0 {
-		nextLikesCountBefore = videos[len(videos)-1].LikesCount
-	} else {
-		nextLikesCountBefore = 0
 	}
 	hasMore := len(videos) == limit
 	feedVideos := make([]FeedVideoItem, 0, len(videos))
@@ -88,14 +115,21 @@ func (f *FeedService) ListLikesCount(ctx context.Context, limit int, likesCountB
 			Description: video.Description,
 			PlayURL:     video.PlayURL,
 			CoverURL:    video.CoverURL,
+			CreateTime:  video.CreateTime.Unix(),
 			LikesCount:  video.LikesCount,
 			IsLiked:     isLiked,
 		})
 	}
 	resp := ListLikesCountResponse{
-		VideoList:            feedVideos,
-		NextLikesCountBefore: nextLikesCountBefore,
-		HasMore:              hasMore,
+		VideoList: feedVideos,
+		HasMore:   hasMore,
+	}
+	if len(videos) > 0 {
+		last := videos[len(videos)-1]
+		nextLikesCountBefore := last.LikesCount
+		nextIDBefore := last.ID
+		resp.NextLikesCountBefore = &nextLikesCountBefore
+		resp.NextIDBefore = &nextIDBefore
 	}
 	return resp, nil
 }
@@ -130,6 +164,7 @@ func (f *FeedService) ListByFollowing(ctx context.Context, limit int, viewerAcco
 			Description: video.Description,
 			PlayURL:     video.PlayURL,
 			CoverURL:    video.CoverURL,
+			CreateTime:  video.CreateTime.Unix(),
 			LikesCount:  video.LikesCount,
 			IsLiked:     isLiked,
 		})
