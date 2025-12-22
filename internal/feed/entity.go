@@ -29,13 +29,20 @@ type ListLatestResponse struct {
 }
 
 type ListLikesCountRequest struct {
-	Limit      int   `json:"limit"`
-	LikesCount int64 `json:"likes_count"`
+	Limit            int    `json:"limit"`
+	LikesCountBefore *int64 `json:"likes_count_before,omitempty"`
+	IDBefore         *uint  `json:"id_before,omitempty"`
+}
+
+type LikesCountCursor struct {
+	LikesCount  int64
+	ID          uint
 }
 
 type ListLikesCountResponse struct {
 	VideoList            []FeedVideoItem `json:"video_list"`
-	NextLikesCountBefore int64           `json:"next_likes_count_before"`
+	NextLikesCountBefore *int64          `json:"next_likes_count_before,omitempty"`
+	NextIDBefore         *uint           `json:"next_id_before,omitempty"`
 	HasMore              bool            `json:"has_more"`
 }
 
