@@ -24,6 +24,9 @@ func (s *SocialService) Follow(ctx context.Context, social *Social) error {
 	if err != nil {
 		return err
 	}
+	if social.FollowerID == social.VloggerID {
+		return errors.New("can not follow self")
+	}
 	isFollowed, err := s.repo.IsFollowed(ctx, social)
 	if err != nil {
 		return err
