@@ -3,9 +3,9 @@ package feed
 import (
 	"context"
 	"encoding/json"
+	rediscache "feedsystem_video_go/internal/redis"
 	"feedsystem_video_go/internal/video"
 	"fmt"
-	rediscache "feedsystem_video_go/internal/redis"
 	"time"
 )
 
@@ -52,28 +52,9 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 		nextTime = 0
 	}
 	hasMore := len(videos) == limit
-	feedVideos := make([]FeedVideoItem, 0, len(videos))
-	for _, video := range videos {
-		var isLiked bool
-		if viewerAccountID == 0 {
-			isLiked = false
-		} else {
-			isLiked, err = f.likeRepo.IsLiked(ctx, video.ID, viewerAccountID)
-			if err != nil {
-				return ListLatestResponse{}, err
-			}
-		}
-		feedVideos = append(feedVideos, FeedVideoItem{
-			ID:          video.ID,
-			Author:      FeedAuthor{ID: video.AuthorID, Username: video.Username},
-			Title:       video.Title,
-			Description: video.Description,
-			PlayURL:     video.PlayURL,
-			CoverURL:    video.CoverURL,
-			CreateTime:  video.CreateTime.Unix(),
-			LikesCount:  video.LikesCount,
-			IsLiked:     isLiked,
-		})
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListLatestResponse{}, err
 	}
 	resp := ListLatestResponse{
 		VideoList: feedVideos,
@@ -97,28 +78,9 @@ func (f *FeedService) ListLikesCount(ctx context.Context, limit int, cursor *Lik
 		return ListLikesCountResponse{}, err
 	}
 	hasMore := len(videos) == limit
-	feedVideos := make([]FeedVideoItem, 0, len(videos))
-	for _, video := range videos {
-		var isLiked bool
-		if viewerAccountID == 0 {
-			isLiked = false
-		} else {
-			isLiked, err = f.likeRepo.IsLiked(ctx, video.ID, viewerAccountID)
-			if err != nil {
-				return ListLikesCountResponse{}, err
-			}
-		}
-		feedVideos = append(feedVideos, FeedVideoItem{
-			ID:          video.ID,
-			Author:      FeedAuthor{ID: video.AuthorID, Username: video.Username},
-			Title:       video.Title,
-			Description: video.Description,
-			PlayURL:     video.PlayURL,
-			CoverURL:    video.CoverURL,
-			CreateTime:  video.CreateTime.Unix(),
-			LikesCount:  video.LikesCount,
-			IsLiked:     isLiked,
-		})
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListLikesCountResponse{}, err
 	}
 	resp := ListLikesCountResponse{
 		VideoList: feedVideos,
@@ -146,17 +108,29 @@ func (f *FeedService) ListByFollowing(ctx context.Context, limit int, viewerAcco
 		nextTime = 0
 	}
 	hasMore := len(videos) == limit
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListByFollowingResponse{}, err
+	}
+	resp := ListByFollowingResponse{
+		VideoList: feedVideos,
+		NextTime:  nextTime,
+		HasMore:   hasMore,
+	}
+	return resp, nil
+}
+
+func (f *FeedService) buildFeedVideos(ctx context.Context, videos []*video.Video, viewerAccountID uint) ([]FeedVideoItem, error) {
 	feedVideos := make([]FeedVideoItem, 0, len(videos))
+	videoIDs := make([]uint, len(videos))
+	for i, v := range videos {
+		videoIDs[i] = v.ID
+	}
+	likedMap, err := f.likeRepo.BatchGetLiked(ctx, videoIDs, viewerAccountID)
+	if err != nil {
+		return nil, err
+	}
 	for _, video := range videos {
-		var isLiked bool
-		if viewerAccountID == 0 {
-			isLiked = false
-		} else {
-			isLiked, err = f.likeRepo.IsLiked(ctx, video.ID, viewerAccountID)
-			if err != nil {
-				return ListByFollowingResponse{}, err
-			}
-		}
 		feedVideos = append(feedVideos, FeedVideoItem{
 			ID:          video.ID,
 			Author:      FeedAuthor{ID: video.AuthorID, Username: video.Username},
@@ -166,13 +140,8 @@ func (f *FeedService) ListByFollowing(ctx context.Context, limit int, viewerAcco
 			CoverURL:    video.CoverURL,
 			CreateTime:  video.CreateTime.Unix(),
 			LikesCount:  video.LikesCount,
-			IsLiked:     isLiked,
+			IsLiked:     likedMap[video.ID],
 		})
 	}
-	resp := ListByFollowingResponse{
-		VideoList: feedVideos,
-		NextTime:  nextTime,
-		HasMore:   hasMore,
-	}
-	return resp, nil
+	return feedVideos, nil
 }

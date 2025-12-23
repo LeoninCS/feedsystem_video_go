@@ -17,8 +17,8 @@ func NewFeedRepository(db *gorm.DB) *FeedRepository {
 	return &FeedRepository{db: db}
 }
 
-func (repo *FeedRepository) ListLatest(ctx context.Context, limit int, latestBefore time.Time) ([]video.Video, error) {
-	var videos []video.Video
+func (repo *FeedRepository) ListLatest(ctx context.Context, limit int, latestBefore time.Time) ([]*video.Video, error) {
+	var videos []*video.Video
 	query := repo.db.WithContext(ctx).Model(&video.Video{}).
 		Order("create_time DESC")
 	if !latestBefore.IsZero() {
@@ -30,8 +30,8 @@ func (repo *FeedRepository) ListLatest(ctx context.Context, limit int, latestBef
 	return videos, nil
 }
 
-func (repo *FeedRepository) ListLikesCountWithCursor(ctx context.Context, limit int, cursor *LikesCountCursor) ([]video.Video, error) {
-	var videos []video.Video
+func (repo *FeedRepository) ListLikesCountWithCursor(ctx context.Context, limit int, cursor *LikesCountCursor) ([]*video.Video, error) {
+	var videos []*video.Video
 	query := repo.db.WithContext(ctx).Model(&video.Video{}).
 		Order("likes_count DESC, id DESC")
 
@@ -49,8 +49,8 @@ func (repo *FeedRepository) ListLikesCountWithCursor(ctx context.Context, limit 
 	return videos, nil
 }
 
-func (repo *FeedRepository) ListByFollowing(ctx context.Context, limit int, viewerAccountID uint) ([]video.Video, error) {
-	var videos []video.Video
+func (repo *FeedRepository) ListByFollowing(ctx context.Context, limit int, viewerAccountID uint) ([]*video.Video, error) {
+	var videos []*video.Video
 	query := repo.db.WithContext(ctx).Model(&video.Video{}).
 		Order("create_time DESC")
 	if viewerAccountID > 0 {
