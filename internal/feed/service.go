@@ -96,8 +96,27 @@ func (f *FeedService) ListLikesCount(ctx context.Context, limit int, cursor *Lik
 	return resp, nil
 }
 
-func (f *FeedService) ListByFollowing(ctx context.Context, limit int, viewerAccountID uint) (ListByFollowingResponse, error) {
-	videos, err := f.repo.ListByFollowing(ctx, limit, viewerAccountID)
+func (f *FeedService) ListByFollowing(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListByFollowingResponse, error) {
+	var cacheKey string
+	if viewerAccountID != 0 && f.cache != nil {
+		before := int64(0)
+		if !latestBefore.IsZero() {
+			before = latestBefore.Unix()
+		}
+		cacheKey = fmt.Sprintf("feed:listByFollowing:limit=%d:accountID=%d:before=%d", limit, viewerAccountID, before)
+		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		defer cancel()
+
+		b, err := f.cache.GetBytes(cacheCtx, cacheKey)
+		if err == nil {
+			var cached ListByFollowingResponse
+			if err := json.Unmarshal(b, &cached); err == nil {
+				return cached, nil
+			}
+		}
+	}
+
+	videos, err := f.repo.ListByFollowing(ctx, limit, viewerAccountID, latestBefore)
 	if err != nil {
 		return ListByFollowingResponse{}, err
 	}
@@ -116,6 +135,13 @@ func (f *FeedService) ListByFollowing(ctx context.Context, limit int, viewerAcco
 		VideoList: feedVideos,
 		NextTime:  nextTime,
 		HasMore:   hasMore,
+	}
+	if cacheKey != "" {
+		if b, err := json.Marshal(resp); err == nil {
+			cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+			defer cancel()
+			_ = f.cache.SetBytes(cacheCtx, cacheKey, b, f.cacheTTL)
+		}
 	}
 	return resp, nil
 }

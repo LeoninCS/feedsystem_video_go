@@ -101,7 +101,11 @@ func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 	if err != nil {
 		viewerAccountID = 0
 	}
-	feedItems, err := f.service.ListByFollowing(c.Request.Context(), req.Limit, viewerAccountID)
+	var latestTime time.Time
+	if req.LatestTime > 0 {
+		latestTime = time.Unix(req.LatestTime, 0)
+	}
+	feedItems, err := f.service.ListByFollowing(c.Request.Context(), req.Limit, latestTime, viewerAccountID)
 	if err != nil {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return

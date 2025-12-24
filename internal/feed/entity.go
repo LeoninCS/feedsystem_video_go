@@ -35,8 +35,8 @@ type ListLikesCountRequest struct {
 }
 
 type LikesCountCursor struct {
-	LikesCount  int64
-	ID          uint
+	LikesCount int64
+	ID         uint
 }
 
 type ListLikesCountResponse struct {
@@ -47,7 +47,8 @@ type ListLikesCountResponse struct {
 }
 
 type ListByFollowingRequest struct {
-	Limit int `json:"limit"`
+	Limit      int   `json:"limit"`
+	LatestTime int64 `json:"latest_time"`
 }
 
 type ListByFollowingResponse struct {

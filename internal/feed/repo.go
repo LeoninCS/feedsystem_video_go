@@ -49,7 +49,7 @@ func (repo *FeedRepository) ListLikesCountWithCursor(ctx context.Context, limit 
 	return videos, nil
 }
 
-func (repo *FeedRepository) ListByFollowing(ctx context.Context, limit int, viewerAccountID uint) ([]*video.Video, error) {
+func (repo *FeedRepository) ListByFollowing(ctx context.Context, limit int, viewerAccountID uint, latestBefore time.Time) ([]*video.Video, error) {
 	var videos []*video.Video
 	query := repo.db.WithContext(ctx).Model(&video.Video{}).
 		Order("create_time DESC")
@@ -59,6 +59,9 @@ func (repo *FeedRepository) ListByFollowing(ctx context.Context, limit int, view
 			Select("vlogger_id").
 			Where("follower_id = ?", viewerAccountID)
 		query = query.Where("author_id IN (?)", followingSubQuery)
+	}
+	if !latestBefore.IsZero() {
+		query = query.Where("create_time < ?", latestBefore)
 	}
 	if err := query.Limit(limit).Find(&videos).Error; err != nil {
 		return nil, err
