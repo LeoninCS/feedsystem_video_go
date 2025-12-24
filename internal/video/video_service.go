@@ -69,6 +69,37 @@ func (vs *VideoService) GetDetail(ctx context.Context, id uint) (*Video, error) 
 			if err := json.Unmarshal(b, &cached); err == nil {
 				return &cached, nil
 			}
+		} else if rediscache.IsMiss(err) {
+			lockKey := "lock:" + cacheKey
+			token, locked, _ := vs.cache.Lock(cacheCtx, lockKey, 500*time.Millisecond)
+			if locked {
+				defer func() { _ = vs.cache.Unlock(context.Background(), lockKey, token) }()
+				if b, err := vs.cache.GetBytes(cacheCtx, cacheKey); err == nil {
+					var cached Video
+					if err := json.Unmarshal(b, &cached); err == nil {
+						return &cached, nil
+					}
+				} else { // 缓存未命中，从数据库中查询
+					video, err := vs.repo.GetByID(ctx, id)
+					if err != nil {
+						return nil, err
+					}
+					if b, err := json.Marshal(video); err == nil {
+						_ = vs.cache.SetBytes(cacheCtx, cacheKey, b, vs.cacheTTL)
+					}
+					return video, nil
+				}
+			} else { // 缓存未命中，其他goroutine正在查询，等待
+				for i := 0; i < 5; i++ {
+					time.Sleep(20 * time.Millisecond)
+					if b, err := vs.cache.GetBytes(cacheCtx, cacheKey); err == nil {
+						var cached Video
+						if err := json.Unmarshal(b, &cached); err == nil {
+							return &cached, nil
+						}
+					}
+				}
+			}
 		}
 	}
 
