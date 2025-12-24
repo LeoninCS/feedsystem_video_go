@@ -2,6 +2,7 @@ package video
 
 import (
 	"context"
+	"errors"
 
 	"gorm.io/gorm"
 )
@@ -43,7 +44,7 @@ func (vr *VideoRepository) ListByAuthorID(ctx context.Context, authorID int64) (
 func (vr *VideoRepository) GetByID(ctx context.Context, id uint) (*Video, error) {
 	var video Video
 	if err := vr.db.WithContext(ctx).First(&video, id).Error; err != nil {
-		return nil, err
+		return (*Video)(nil), err
 	}
 	return &video, nil
 }
@@ -60,7 +61,7 @@ func (vr *VideoRepository) UpdateLikesCount(ctx context.Context, id uint, likesC
 func (vr *VideoRepository) IsExist(ctx context.Context, id uint) (bool, error) {
 	var video Video
 	if err := vr.db.WithContext(ctx).First(&video, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return false, nil
 		}
 		return false, err
