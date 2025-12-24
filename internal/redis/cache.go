@@ -2,6 +2,8 @@ package redis
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"os"
 	"strconv"
 	"time"
@@ -64,4 +66,40 @@ func (c *Client) Del(ctx context.Context, key string) error {
 
 func IsMiss(err error) bool {
 	return err == redis.Nil
+}
+
+func randToken(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+func (c *Client) Lock(ctx context.Context, key string, ttl time.Duration) (token string, ok bool, err error) {
+	if c == nil || c.rdb == nil {
+		return "", false, nil
+	}
+	token, err = randToken(16)
+	if err != nil {
+		return "", false, err
+	}
+	ok, err = c.rdb.SetNX(ctx, key, token, ttl).Result()
+	return token, ok, err
+}
+
+var unlockScript = redis.NewScript(`
+if redis.call("GET", KEYS[1]) == ARGV[1] then
+  return redis.call("DEL", KEYS[1])
+else
+  return 0
+end
+`)
+
+func (c *Client) Unlock(ctx context.Context, key string, token string) error {
+	if c == nil || c.rdb == nil {
+		return nil
+	}
+	_, err := unlockScript.Run(ctx, c.rdb, []string{key}, token).Result()
+	return err
 }
