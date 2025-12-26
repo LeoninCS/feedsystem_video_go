@@ -1,0 +1,2 @@
+# Exclude Vue single-file components from GitHub Linguist language stats
+*.vue linguist-vendored
