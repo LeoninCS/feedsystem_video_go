@@ -1,6 +1,14 @@
 package video
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"os"
+	"path"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"feedsystem_video_go/internal/account"
@@ -49,6 +57,125 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		return
 	}
 	c.JSON(200, video)
+}
+
+func (vh *VideoHandler) UploadVideo(c *gin.Context) {
+	authorId, err := middleware.GetAccountID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	f, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
+		return
+	}
+
+	const maxSize = 200 << 20
+	if f.Size <= 0 || f.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid file size"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(f.Filename))
+	if ext != ".mp4" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "only .mp4 is allowed"})
+		return
+	}
+
+	date := time.Now().Format("20060102")
+	relDir := filepath.Join("videos", fmt.Sprintf("%d", authorId), date)
+	root := filepath.Join(".run", "uploads")
+	absDir := filepath.Join(root, relDir)
+	if err := os.MkdirAll(absDir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := randHex(16) + ext
+	absPath := filepath.Join(absDir, filename)
+
+	if err := c.SaveUploadedFile(f, absPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	urlPath := path.Join("/static", "videos", fmt.Sprintf("%d", authorId), date, filename)
+
+	c.JSON(http.StatusOK, gin.H{
+		"url":      buildAbsoluteURL(c, urlPath),
+		"play_url": buildAbsoluteURL(c, urlPath),
+	})
+}
+
+func (vh *VideoHandler) UploadCover(c *gin.Context) {
+	authorId, err := middleware.GetAccountID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	f, err := c.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing file"})
+		return
+	}
+
+	const maxSize = 10 << 20
+	if f.Size <= 0 || f.Size > maxSize {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid file size"})
+		return
+	}
+
+	ext := strings.ToLower(filepath.Ext(f.Filename))
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".webp":
+	default:
+		c.JSON(http.StatusBadRequest, gin.H{"error": "only .jpg/.jpeg/.png/.webp is allowed"})
+		return
+	}
+
+	date := time.Now().Format("20060102")
+	relDir := filepath.Join("covers", fmt.Sprintf("%d", authorId), date)
+	root := filepath.Join(".run", "uploads")
+	absDir := filepath.Join(root, relDir)
+	if err := os.MkdirAll(absDir, 0o755); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	filename := randHex(16) + ext
+	absPath := filepath.Join(absDir, filename)
+
+	if err := c.SaveUploadedFile(f, absPath); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	urlPath := path.Join("/static", "covers", fmt.Sprintf("%d", authorId), date, filename)
+
+	c.JSON(http.StatusOK, gin.H{
+		"url":       buildAbsoluteURL(c, urlPath),
+		"cover_url": buildAbsoluteURL(c, urlPath),
+	})
+}
+
+func randHex(n int) string {
+	b := make([]byte, n)
+	_, _ = rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+func buildAbsoluteURL(c *gin.Context, p string) string {
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	}
+	if xf := c.GetHeader("X-Forwarded-Proto"); xf != "" {
+		scheme = xf
+	}
+	return fmt.Sprintf("%s://%s%s", scheme, c.Request.Host, p)
 }
 
 func (vh *VideoHandler) DeleteVideo(c *gin.Context) {
