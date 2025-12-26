@@ -5,28 +5,37 @@
 仓库内附 Postman Collection（`test/postman.json`），可用于手工/批量调试接口，并包含部分断言脚本。
 
 ## 目录结构
-- `cmd/`：程序入口（`cmd/main.go`）
-- `configs/`：YAML 配置（`configs/config.yaml`）
-- `internal/account/`：账号模块
-- `internal/video/`：视频 / 点赞 / 评论模块
-- `internal/social/`：关注模块
-- `internal/feed/`：Feed 模块
-- `internal/http/`：Gin 路由注册（`internal/http/router.go`）
-- `internal/middleware/`：JWT 中间件（`internal/middleware/jwt.go`）
+- `backend/cmd/`：程序入口（`backend/cmd/main.go`）
+- `backend/configs/`：YAML 配置（`backend/configs/config.yaml`）
+- `backend/internal/account/`：账号模块
+- `backend/internal/video/`：视频 / 点赞 / 评论模块
+- `backend/internal/social/`：关注模块
+- `backend/internal/feed/`：Feed 模块
+- `backend/internal/http/`：Gin 路由注册（`backend/internal/http/router.go`）
+- `backend/internal/middleware/`：JWT 中间件（`backend/internal/middleware/jwt.go`）
 - `test/`：Postman Collection（推荐使用 `test/postman.json`）
 
 ## 快速开始
-1. 准备 MySQL 并创建数据库（库名/账号密码在 `configs/config.yaml` 配置）。
-2. 安装依赖：`go mod tidy`
-3. 启动服务：`go run ./cmd`
+1. 准备 MySQL 并创建数据库（库名/账号密码在 `backend/configs/config.yaml` 配置）。
+2. 安装依赖：`cd backend && go mod tidy`
+3. 启动服务：直接 `./start.sh`（默认同时启动后端+前端），或仅启动后端：`cd backend && go run ./cmd`
 4. Postman 导入：`test/postman.json`（默认 `host=http://localhost:8080`）
 
-> 启动时会自动执行 `AutoMigrate`（见 `internal/db/db.go`）。
+> 启动时会自动执行 `AutoMigrate`（见 `backend/internal/db/db.go`）。
 
 Redis 为可选依赖：未配置/不可用时服务仍可启动，但不会启用缓存加速。
 
+## 前端（Vue）
+前端工程在 `frontend/`，已对接本仓库后端全部接口：
+- 启动：`cd frontend && npm install && npm run dev`
+- 默认通过 Vite 代理：`/api/...` → `http://localhost:8080/...`（见 `frontend/vite.config.ts`）
+- 一键启动：`./start.sh`；只启动后端可用 `START_FRONTEND=0 ./start.sh`
+- 页面：
+  - `/`：推荐（最新流）、点赞榜、关注流
+  - `/hot`：热榜（热度榜）
+
 ## 配置
-配置文件：`configs/config.yaml`
+配置文件：`backend/configs/config.yaml`
 
 ```yaml
 server:
@@ -48,7 +57,7 @@ database:
 
 ## 认证说明（与代码一致）
 - 认证 Header：`Authorization: Bearer <jwt>`
-- 校验流程（见 `internal/middleware/jwt.go`）：
+- 校验流程（见 `backend/internal/middleware/jwt.go`）：
   - 校验 JWT 签名与过期时间。
   - 校验该账号“当前有效 token”：优先查 Redis key `account:<accountID>`；Redis 读不到/失败则回退查 DB 的 `account.token`；DB 校验通过会回填 Redis（自愈）。
 - 因此：
@@ -60,8 +69,9 @@ database:
 
 ## Redis 缓存/加速点（可选）
 - 鉴权 token 校验：Redis key `account:<accountID>`（TTL 24h）。
-- Feed 匿名流缓存：`/feed/listLatest`（短 TTL，见 `internal/feed/service.go`）。
-- 视频详情缓存：`/video/getDetail`（见 `internal/video/video_service.go`）。
+- Feed 匿名流缓存：`/feed/listLatest`（短 TTL，见 `backend/internal/feed/service.go`）。
+- 热榜：`/feed/listByPopularity`（Redis 时间窗 ZSET 聚合，见 `backend/internal/feed/service.go` 与 `backend/internal/video/video_service.go`）。
+- 视频详情缓存：`/video/getDetail`（见 `backend/internal/video/video_service.go`）。
 
 ## 手动自测（推荐）
 1. `POST /account/register` → `POST /account/login` 拿到 `token`。
@@ -84,7 +94,7 @@ database:
 注意：执行 `Account/Rename` 后，集合会把响应里的 `token` 覆盖到 `jwt_token`，否则后续鉴权接口会因为旧 token 失效而 `401`。
 
 ## API（路由与鉴权）
-路由注册见 `internal/http/router.go`，以下均为 `POST` + JSON body。
+路由注册见 `backend/internal/http/router.go`，以下均为 `POST` + JSON body。
 
 ### 账号（`/account`）
 | 路径 | 是否需要 JWT | 说明 |
@@ -131,11 +141,13 @@ database:
 |------|-------------|------|
 | `/feed/listLatest` | 否（可选 JWT） | `{"limit":10,"latest_time":0}` |
 | `/feed/listLikesCount` | 否（可选 JWT） | `{"limit":10,"likes_count_before":0,"id_before":0}` |
+| `/feed/listByPopularity` | 否（可选 JWT） | `{"limit":10,"as_of":0,"offset":0}` |
 | `/feed/listByFollowing` | 是 | `{"limit":10}` |
 
 分页说明：
 - `/feed/listLatest`：`latest_time` 为 Unix 秒时间戳；响应 `next_time` 也为 Unix 秒（`0` 表示无下一页）。
 - `/feed/listLikesCount`：使用复合游标分页：请求携带 `likes_count_before` + `id_before`（两者一起用；全为 `0` 表示第一页）；响应返回 `next_likes_count_before` + `next_id_before` 用于下一页请求。
+- `/feed/listByPopularity`：稳定分页：第一页传 `as_of=0, offset=0`；响应返回 `as_of`（分钟时间戳）与 `next_offset`，下一页原样带回即可。
 
 ## 数据表（自动迁移）
-启动时会执行 `AutoMigrate`（`internal/db/db.go`），创建/更新：`Account`、`Video`、`Like`、`Comment`、`Social`。
+启动时会执行 `AutoMigrate`（`backend/internal/db/db.go`），创建/更新：`Account`、`Video`、`Like`、`Comment`、`Social`。
