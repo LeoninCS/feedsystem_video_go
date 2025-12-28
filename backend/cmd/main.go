@@ -5,6 +5,7 @@ import (
 	"feedsystem_video_go/internal/config"
 	"feedsystem_video_go/internal/db"
 	apphttp "feedsystem_video_go/internal/http"
+	rabbitmq "feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"log"
 	"strconv"
@@ -12,14 +13,14 @@ import (
 )
 
 func main() {
-	// Load config
+	// 加载配置
 	log.Printf("Loading config from configs/config.yaml")
 	cfg, err := config.Load("configs/config.yaml")
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	// Connect database
+	// 连接数据库
 	//log.Printf("Database config: %v", cfg.Database)
 	sqlDB, err := db.NewDB(cfg.Database)
 	if err != nil {
@@ -30,8 +31,8 @@ func main() {
 	}
 	defer db.CloseDB(sqlDB)
 
-	// Connect redis (optional, used for caching)
-	cache, err := rediscache.NewFromEnv()
+	// 连接 Redis (可选，用于缓存)
+	cache, err := rediscache.NewFromEnv(&cfg.Redis)
 	if err != nil {
 		log.Printf("Redis config error (cache disabled): %v", err)
 		cache = nil
@@ -48,8 +49,18 @@ func main() {
 		}
 	}
 
-	// Set router
-	r := apphttp.SetRouter(sqlDB, cache)
+	// 连接 RabbitMQ (可选，用于消息队列)
+	rmq, err := rabbitmq.NewRabbitMQ(&cfg.RabbitMQ)
+	if err != nil {
+		log.Printf("RabbitMQ config error (disabled): %v", err)
+		rmq = nil
+	} else {
+		defer rmq.Close()
+		log.Printf("RabbitMQ connected")
+	}
+
+	// 设置路由
+	r := apphttp.SetRouter(sqlDB, cache, rmq)
 	log.Printf("Server is running on port %d", cfg.Server.Port)
 	if err := r.Run(":" + strconv.Itoa(cfg.Server.Port)); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
