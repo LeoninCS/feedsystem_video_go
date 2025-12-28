@@ -609,6 +609,13 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+
+.scroller::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .center-hint {

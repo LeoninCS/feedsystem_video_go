@@ -25,6 +25,17 @@
   box-sizing: border-box;
 }
 
+/* Hide scrollbars globally (still scrollable). */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge legacy */
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 html,
 body {
   height: 100%;

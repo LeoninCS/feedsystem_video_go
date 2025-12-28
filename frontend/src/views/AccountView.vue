@@ -339,10 +339,10 @@ watch(
 
 <style scoped>
 .login-wrap {
-  min-height: calc(100vh - 56px);
   display: grid;
-  place-items: center;
-  padding: 18px 0 40px;
+  justify-items: center;
+  align-content: start;
+  padding: clamp(56px, 14vh, 160px) 16px 40px;
 }
 
 .login-card {
