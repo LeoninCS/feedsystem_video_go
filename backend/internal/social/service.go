@@ -4,15 +4,17 @@ import (
 	"context"
 	"errors"
 	"feedsystem_video_go/internal/account"
+	"feedsystem_video_go/internal/middleware/rabbitmq"
 )
 
 type SocialService struct {
 	repo        *SocialRepository
 	accountrepo *account.AccountRepository
+	socialMQ    *rabbitmq.SocialMQ
 }
 
-func NewSocialService(repo *SocialRepository, accountrepo *account.AccountRepository) *SocialService {
-	return &SocialService{repo: repo, accountrepo: accountrepo}
+func NewSocialService(repo *SocialRepository, accountrepo *account.AccountRepository, socialMQ *rabbitmq.SocialMQ) *SocialService {
+	return &SocialService{repo: repo, accountrepo: accountrepo, socialMQ: socialMQ}
 }
 
 func (s *SocialService) Follow(ctx context.Context, social *Social) error {
@@ -34,6 +36,9 @@ func (s *SocialService) Follow(ctx context.Context, social *Social) error {
 	if isFollowed {
 		return errors.New("already followed")
 	}
+	if s.socialMQ != nil {
+		s.socialMQ.Follow(ctx, social.FollowerID, social.VloggerID)
+	}
 	return s.repo.Follow(ctx, social)
 }
 
@@ -52,6 +57,9 @@ func (s *SocialService) Unfollow(ctx context.Context, social *Social) error {
 	}
 	if !isFollowed {
 		return errors.New("not followed")
+	}
+	if s.socialMQ != nil {
+		s.socialMQ.UnFollow(ctx, social.FollowerID, social.VloggerID)
 	}
 	return s.repo.Unfollow(ctx, social)
 }

@@ -4,15 +4,17 @@ import (
 	"feedsystem_video_go/internal/account"
 	"feedsystem_video_go/internal/feed"
 	"feedsystem_video_go/internal/middleware/jwt"
+	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
-func SetRouter(db *gorm.DB, cache *rediscache.Client) *gin.Engine {
+func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *gin.Engine {
 	r := gin.Default()
 	r.Static("/static", "./.run/uploads")
 	// account
@@ -77,8 +79,13 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client) *gin.Engine {
 		protectedCommentGroup.POST("/delete", commentHandler.DeleteComment)
 	}
 	// social
+	socialMQ, err := rabbitmq.NewSocialMQ(rmq)
+	if err != nil {
+		log.Printf("SocialMQ init failed (mq disabled): %v", err)
+		socialMQ = nil
+	}
 	socialRepository := social.NewSocialRepository(db)
-	socialService := social.NewSocialService(socialRepository, accountRepository)
+	socialService := social.NewSocialService(socialRepository, accountRepository, socialMQ)
 	socialHandler := social.NewSocialHandler(socialService)
 	socialGroup := r.Group("/social")
 	protectedSocialGroup := socialGroup.Group("")
