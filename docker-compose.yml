@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management  # 使用带有管理界面的版本
+    container_name: my-rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # 消息队列端口
+      - "15672:15672" # 管理后台端口
+    environment:
+      - RABBITMQ_DEFAULT_USER=admin
+      - RABBITMQ_DEFAULT_PASS=password123
+    volumes:
+      - ./data:/var/lib/rabbitmq # 数据持久化，保存到当前目录下的 data 文件夹
