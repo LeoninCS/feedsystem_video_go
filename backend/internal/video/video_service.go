@@ -9,17 +9,19 @@ import (
 	"strings"
 	"time"
 
+	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 )
 
 type VideoService struct {
-	repo     *VideoRepository
-	cache    *rediscache.Client
-	cacheTTL time.Duration
+	repo         *VideoRepository
+	cache        *rediscache.Client
+	cacheTTL     time.Duration
+	popularityMQ *rabbitmq.PopularityMQ
 }
 
-func NewVideoService(repo *VideoRepository, cache *rediscache.Client) *VideoService {
-	return &VideoService{repo: repo, cache: cache, cacheTTL: 5 * time.Minute}
+func NewVideoService(repo *VideoRepository, cache *rediscache.Client, popularityMQ *rabbitmq.PopularityMQ) *VideoService {
+	return &VideoService{repo: repo, cache: cache, cacheTTL: 5 * time.Minute, popularityMQ: popularityMQ}
 }
 
 func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
@@ -171,6 +173,12 @@ func (vs *VideoService) UpdateLikesCount(ctx context.Context, id uint, likesCoun
 func (vs *VideoService) UpdatePopularity(ctx context.Context, id uint, change int64) error {
 	if err := vs.repo.UpdatePopularity(ctx, id, change); err != nil {
 		return err
+	}
+
+	if vs.popularityMQ != nil {
+		if err := vs.popularityMQ.Update(ctx, id, change); err == nil {
+			return nil
+		}
 	}
 
 	if vs.cache != nil {
