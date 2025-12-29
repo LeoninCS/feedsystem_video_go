@@ -2,8 +2,6 @@ package rabbitmq
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"time"
 )
@@ -66,12 +64,4 @@ func (s *SocialMQ) publish(ctx context.Context, action, routingKey string, follo
 		OccurredAt: time.Now().UTC(),
 	}
 	return s.PublishJSON(ctx, socialExchange, routingKey, evt)
-}
-
-func newEventID(n int) (string, error) {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
 }

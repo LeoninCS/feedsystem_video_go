@@ -2,6 +2,8 @@ package rabbitmq
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"feedsystem_video_go/internal/config"
@@ -103,4 +105,12 @@ func (r *RabbitMQ) PublishJSON(ctx context.Context, exchange string, routingKey 
 		Timestamp:    time.Now(),
 		Body:         b,
 	})
+}
+
+func newEventID(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
