@@ -1,15 +1,106 @@
 version: '3.8'
 
 services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "123456"
+      MYSQL_DATABASE: "feedsystem"
+      TZ: "Asia/Shanghai"
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p123456 --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "123456"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   rabbitmq:
-    image: rabbitmq:3-management  # 使用带有管理界面的版本
-    container_name: my-rabbitmq
+    image: rabbitmq:3-management
     restart: always
     ports:
-      - "5672:5672"   # 消息队列端口
-      - "15672:15672" # 管理后台端口
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=password123
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password123
     volumes:
-      - ./data:/var/lib/rabbitmq # 数据持久化，保存到当前目录下的 data 文件夹
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: api
+    restart: always
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend/configs/config.docker.yaml:/app/configs/config.yaml:ro
+      - backend_uploads:/app/.run/uploads
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: worker
+    restart: always
+    volumes:
+      - ./backend/configs/config.docker.yaml:/app/configs/config.yaml:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: always
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  redis_data:
+  rabbitmq_data:
+  backend_uploads:
+
