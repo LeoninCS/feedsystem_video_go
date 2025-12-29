@@ -37,7 +37,12 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 	}
 	// video
 	videoRepository := video.NewVideoRepository(db)
-	videoService := video.NewVideoService(videoRepository, cache)
+	popularityMQ, err := rabbitmq.NewPopularityMQ(rmq)
+	if err != nil {
+		log.Printf("PopularityMQ init failed (mq disabled): %v", err)
+		popularityMQ = nil
+	}
+	videoService := video.NewVideoService(videoRepository, cache, popularityMQ)
 	videoHandler := video.NewVideoHandler(videoService, accountService)
 	videoGroup := r.Group("/video")
 	{
@@ -52,9 +57,14 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 		protectedVideoGroup.POST("/publish", videoHandler.PublishVideo)
 	}
 	// like
+	likeMQ, err := rabbitmq.NewLikeMQ(rmq)
+	if err != nil {
+		log.Printf("LikeMQ init failed (mq disabled): %v", err)
+		likeMQ = nil
+	}
 	likeRepository := video.NewLikeRepository(db)
-	likeService := video.NewLikeService(likeRepository, videoRepository)
-	likeHandler := video.NewLikeHandler(likeService, videoService)
+	likeService := video.NewLikeService(likeRepository, videoRepository, cache, likeMQ, popularityMQ)
+	likeHandler := video.NewLikeHandler(likeService)
 	likeGroup := r.Group("/like")
 	protectedLikeGroup := likeGroup.Group("")
 	protectedLikeGroup.Use(jwt.JWTAuth(accountRepository, cache))
@@ -66,8 +76,13 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 	}
 	// comment
 	commentRepository := video.NewCommentRepository(db)
-	commentService := video.NewCommentService(commentRepository, videoRepository)
-	commentHandler := video.NewCommentHandler(commentService, accountService, videoService)
+	commentMQ, err := rabbitmq.NewCommentMQ(rmq)
+	if err != nil {
+		log.Printf("CommentMQ init failed (mq disabled): %v", err)
+		commentMQ = nil
+	}
+	commentService := video.NewCommentService(commentRepository, videoRepository, cache, commentMQ, popularityMQ)
+	commentHandler := video.NewCommentHandler(commentService, accountService)
 	commentGroup := r.Group("/comment")
 	{
 		commentGroup.POST("/listAll", commentHandler.GetAllComments)
