@@ -11,6 +11,7 @@ RUN_DIR="${RUN_DIR:-$BACKEND_DIR/.run}"
 START_REDIS="${START_REDIS:-1}"
 START_RABBITMQ="${START_RABBITMQ:-1}"
 START_BACKEND="${START_BACKEND:-1}"
+START_WORKER="${START_WORKER:-1}"
 START_FRONTEND="${START_FRONTEND:-1}"
 
 # docker compose (for dependencies like RabbitMQ):
@@ -47,12 +48,17 @@ require_cmd() {
 }
 
 BACKEND_PID=""
+WORKER_PID=""
 FRONTEND_PID=""
 cleanup() {
   set +e
   if [ -n "${FRONTEND_PID:-}" ]; then
     echo "[start.sh] Stopping frontend (pid=$FRONTEND_PID)"
     kill "$FRONTEND_PID" >/dev/null 2>&1 || true
+  fi
+  if [ -n "${WORKER_PID:-}" ]; then
+    echo "[start.sh] Stopping worker (pid=$WORKER_PID)"
+    kill "$WORKER_PID" >/dev/null 2>&1 || true
   fi
   if [ -n "${BACKEND_PID:-}" ]; then
     echo "[start.sh] Stopping backend (pid=$BACKEND_PID)"
@@ -63,6 +69,9 @@ cleanup() {
   if command -v taskkill >/dev/null 2>&1; then
     if [ -n "${FRONTEND_PID:-}" ]; then
       taskkill //PID "$FRONTEND_PID" //T //F >/dev/null 2>&1 || true
+    fi
+    if [ -n "${WORKER_PID:-}" ]; then
+      taskkill //PID "$WORKER_PID" //T //F >/dev/null 2>&1 || true
     fi
     if [ -n "${BACKEND_PID:-}" ]; then
       taskkill //PID "$BACKEND_PID" //T //F >/dev/null 2>&1 || true
@@ -76,7 +85,7 @@ cleanup() {
 }
 trap cleanup INT TERM EXIT
 
-if [ "$START_BACKEND" = "1" ]; then
+if [ "$START_BACKEND" = "1" ] || [ "$START_WORKER" = "1" ]; then
   require_dir backend "$BACKEND_DIR"
   mkdir -p "$RUN_DIR"
   require_cmd go
@@ -166,6 +175,14 @@ start_backend_bg() {
   echo "[start.sh] Backend PID: $BACKEND_PID"
 }
 
+start_worker_bg() {
+  echo "[start.sh] Starting worker (background)"
+  (cd "$BACKEND_DIR" && go run ./cmd/worker) &
+  WORKER_PID=$!
+  echo "$WORKER_PID" >"$RUN_DIR/worker.pid"
+  echo "[start.sh] Worker PID: $WORKER_PID"
+}
+
 start_frontend_bg() {
   if [ "$FRONTEND_INSTALL" = "1" ] || { [ "$FRONTEND_INSTALL" = "auto" ] && [ ! -d "$FRONTEND_DIR/node_modules" ]; }; then
     echo "[start.sh] Installing frontend deps"
@@ -179,11 +196,11 @@ start_frontend_bg() {
   echo "[start.sh] Frontend PID: $FRONTEND_PID"
 }
 
-if [ "$START_RABBITMQ" = "1" ] && [ "$START_BACKEND" = "1" ]; then
+if [ "$START_RABBITMQ" = "1" ] && { [ "$START_BACKEND" = "1" ] || [ "$START_WORKER" = "1" ]; }; then
   start_rabbitmq_compose
 fi
 
-if [ "$START_REDIS" = "1" ] && [ "$START_BACKEND" = "1" ]; then
+if [ "$START_REDIS" = "1" ] && { [ "$START_BACKEND" = "1" ] || [ "$START_WORKER" = "1" ]; }; then
   start_redis
 fi
 
@@ -191,13 +208,17 @@ if [ "$START_BACKEND" = "1" ]; then
   start_backend_bg
 fi
 
+if [ "$START_WORKER" = "1" ]; then
+  start_worker_bg
+fi
+
 if [ "$START_FRONTEND" = "1" ]; then
   start_frontend_bg
 fi
 
-if [ "$START_BACKEND" = "1" ] || [ "$START_FRONTEND" = "1" ]; then
+if [ "$START_BACKEND" = "1" ] || [ "$START_WORKER" = "1" ] || [ "$START_FRONTEND" = "1" ]; then
   echo "[start.sh] Press Ctrl+C to stop."
   wait
 else
-  echo "[start.sh] Nothing to start. Set START_BACKEND=1 and/or START_FRONTEND=1."
+  echo "[start.sh] Nothing to start. Set START_BACKEND=1 and/or START_WORKER=1 and/or START_FRONTEND=1."
 fi
