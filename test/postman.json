@@ -628,8 +628,8 @@
             {
               "listen": "test",
               "script": {
-                  "type": "text/javascript",
-                  "exec": [
+                "type": "text/javascript",
+                "exec": [
                   "let json = {};",
                   "try { json = pm.response.json(); } catch (e) {}",
                   "if (json && typeof json.next_likes_count_before !== \"undefined\") pm.collectionVariables.set(\"feedLikesCountBefore\", String(json.next_likes_count_before));",
