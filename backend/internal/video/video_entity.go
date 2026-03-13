@@ -38,3 +38,11 @@ type UpdateLikesCountRequest struct {
 	ID         uint  `json:"id"`
 	LikesCount int64 `json:"likes_count"`
 }
+
+type OutboxMsg struct {
+	ID         uint      `gorm:"primaryKey"`
+	VideoID    uint      `gorm:"index"`
+	EventType  string    `gorm:"type:varchar(50)"`
+	CreateTime time.Time `gorm:"autoCreateTime"`
+	Status     string    `gorm:"type:varchar(50);index"`
+}
