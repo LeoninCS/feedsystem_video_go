@@ -11,6 +11,8 @@ import (
 
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
+
+	"gorm.io/gorm"
 )
 
 type VideoService struct {
@@ -41,10 +43,28 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 	if video.CoverURL == "" {
 		return errors.New("cover url is required")
 	}
-	if err := vs.repo.CreateVideo(ctx, video); err != nil {
-		return err
-	}
-	return nil
+
+	//事务保证视频写入库和消息写入本地消息表的一致性
+	err := vs.repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(video).Error; err != nil {
+			return err
+		}
+
+		msg := OutboxMsg{
+			VideoID:    video.ID,
+			EventType:  "video_published",
+			Status:     "pending",
+			CreateTime: video.CreateTime,
+		}
+
+		if err := tx.Create(&msg).Error; err != nil {
+			return err
+		}
+		return nil
+
+	})
+	return err
+
 }
 
 func (vs *VideoService) Delete(ctx context.Context, id uint, authorID uint) error {

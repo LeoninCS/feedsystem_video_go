@@ -16,3 +16,7 @@ func (c *Client) SetBytes(ctx context.Context, key string, value []byte, ttl tim
 func (c *Client) Del(ctx context.Context, key string) error {
 	return c.rdb.Del(ctx, key).Err()
 }
+
+func (c *Client) MGet(cacheCtx context.Context, cacheKeys ...string) ([]interface{}, error) {
+	return c.rdb.MGet(cacheCtx, cacheKeys...).Result()
+}

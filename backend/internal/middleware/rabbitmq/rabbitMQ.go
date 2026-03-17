@@ -14,8 +14,8 @@ import (
 )
 
 type RabbitMQ struct {
-	conn *amqp.Connection
-	ch   *amqp.Channel
+	Conn *amqp.Connection
+	Ch   *amqp.Channel
 }
 
 func NewRabbitMQ(cfg *config.RabbitMQConfig) (*RabbitMQ, error) {
@@ -31,31 +31,31 @@ func NewRabbitMQ(cfg *config.RabbitMQConfig) (*RabbitMQ, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &RabbitMQ{conn: conn, ch: ch}, nil
+	return &RabbitMQ{Conn: conn, Ch: ch}, nil
 }
 
 func (r *RabbitMQ) Close() error {
-	if r == nil || r.ch == nil || r.conn == nil {
+	if r == nil || r.Ch == nil || r.Conn == nil {
 		return nil
 	}
-	if err := r.ch.Close(); err != nil {
+	if err := r.Ch.Close(); err != nil {
 		return err
 	}
-	if err := r.conn.Close(); err != nil {
+	if err := r.Conn.Close(); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string) error {
-	if r == nil || r.ch == nil {
+	if r == nil || r.Ch == nil {
 		return errors.New("rabbitmq is not initialized")
 	}
 	if exchange == "" || queue == "" || bindingKey == "" {
 		return errors.New("exchange/queue/bindingKey is required")
 	}
 
-	if err := r.ch.ExchangeDeclare(
+	if err := r.Ch.ExchangeDeclare(
 		exchange,
 		"topic",
 		true,
@@ -67,7 +67,7 @@ func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string
 		return err
 	}
 
-	q, err := r.ch.QueueDeclare(
+	q, err := r.Ch.QueueDeclare(
 		queue,
 		true,
 		false,
@@ -79,7 +79,7 @@ func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string
 		return err
 	}
 
-	return r.ch.QueueBind(
+	return r.Ch.QueueBind(
 		q.Name,
 		bindingKey,
 		exchange,
@@ -89,7 +89,7 @@ func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string
 }
 
 func (r *RabbitMQ) PublishJSON(ctx context.Context, exchange string, routingKey string, payload any) error {
-	if r == nil || r.ch == nil {
+	if r == nil || r.Ch == nil {
 		return errors.New("rabbitmq is not initialized")
 	}
 	if exchange == "" || routingKey == "" {
@@ -99,7 +99,7 @@ func (r *RabbitMQ) PublishJSON(ctx context.Context, exchange string, routingKey 
 	if err != nil {
 		return err
 	}
-	return r.ch.PublishWithContext(ctx, exchange, routingKey, false, false, amqp.Publishing{
+	return r.Ch.PublishWithContext(ctx, exchange, routingKey, false, false, amqp.Publishing{
 		ContentType:  "application/json",
 		DeliveryMode: amqp.Persistent,
 		Timestamp:    time.Now(),

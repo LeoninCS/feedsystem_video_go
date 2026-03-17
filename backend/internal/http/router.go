@@ -8,6 +8,7 @@ import (
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
+	"feedsystem_video_go/internal/worker"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -127,5 +128,13 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 	{
 		protectedFeedGroup.POST("/listByFollowing", feedHandler.ListByFollowing)
 	}
+	//worker
+	timelineMQ, err := rabbitmq.NewTimelineMQ(rmq)
+	if err != nil {
+		log.Printf("timelineMQ init failed (mq disabled): %v", err)
+		socialMQ = nil
+	}
+	worker.StartOutboxPoller(db, timelineMQ)
+	worker.StartConsumer(timelineMQ, "video.timeline.update.queue", cache)
 	return r
 }

@@ -26,7 +26,7 @@ func (f *FeedHandler) ListLatest(c *gin.Context) {
 	}
 	var latestTime time.Time
 	if req.LatestTime > 0 {
-		latestTime = time.Unix(req.LatestTime, 0)
+		latestTime = time.UnixMilli(req.LatestTime)
 	}
 	viewerAccountID, err := jwt.GetAccountID(c)
 	if err != nil {

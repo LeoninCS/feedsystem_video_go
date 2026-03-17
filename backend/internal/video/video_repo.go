@@ -22,6 +22,13 @@ func (vr *VideoRepository) CreateVideo(ctx context.Context, video *Video) error 
 	return nil
 }
 
+func (vr *VideoRepository) CreateMsg(ctx context.Context, Msg *OutboxMsg) error {
+	if err := vr.db.WithContext(ctx).Create(Msg).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
 func (vr *VideoRepository) DeleteVideo(ctx context.Context, id uint) error {
 	if err := vr.db.WithContext(ctx).Delete(&Video{}, id).Error; err != nil {
 		return err
