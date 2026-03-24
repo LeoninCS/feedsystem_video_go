@@ -61,6 +61,7 @@ func (r *LikeRepository) IsLiked(ctx context.Context, videoID, accountID uint) (
 	}
 	return count > 0, nil
 }
+
 func (r *LikeRepository) BatchGetLiked(ctx context.Context, videoIDs []uint, accountID uint) (map[uint]bool, error) {
 	likeMap := make(map[uint]bool)
 	if len(videoIDs) == 0 {

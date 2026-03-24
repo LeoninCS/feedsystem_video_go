@@ -15,9 +15,15 @@ import (
 func main() {
 	// 加载配置
 	log.Printf("Loading config from configs/config.yaml")
-	cfg, err := config.Load("configs/config.yaml")
+	const configPath = "configs/config.yaml"
+	cfg, usedDefault, err := config.LoadLocalDev(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
+	}
+	if usedDefault {
+		log.Printf("Config File %s not found, using default local config", configPath)
+	} else {
+		log.Printf("Config loaded from file: %s", configPath)
 	}
 
 	// 连接数据库
