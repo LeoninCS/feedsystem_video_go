@@ -5,10 +5,6 @@
 详细设计与接口说明请阅读：`feedsystem_video_go项目设计.md`（包含模块设计、表结构、流程图与接口清单）。
 ## [项目演示](https://www.bilibili.com/video/BV1Dti7B9E6Y?vd_source=4b2884373b2c4c4147b10162c1709276)
 
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=LeoninCS/feedsystem_video_go&type=Date)](https://www.star-history.com/#LeoninCS/feedsystem_video_go&Date)
-
 ## Docker Compose 一键启动（推荐）
 
 要求：已安装 Docker Desktop / Docker Engine + Docker Compose。
@@ -53,3 +49,7 @@ npm run dev
 ```
 
 前端默认使用 Vite 代理 `/api` 到 `http://127.0.0.1:8080`（见 `frontend/vite.config.ts`）。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LeoninCS/feedsystem_video_go&type=Date)](https://www.star-history.com/#LeoninCS/feedsystem_video_go&Date)
