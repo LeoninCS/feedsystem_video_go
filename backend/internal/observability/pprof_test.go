@@ -17,15 +17,26 @@ func TestNewPprofMux(t *testing.T) {
 		t.Errorf("Expected status code 200, got %d", rr.Code)
 	}
 }
-	
-func TestStartPprofServerWithDisabled(t *testing.T) {
+func TestNewPprofServerWithDisabled(t *testing.T) {
 	t.Parallel()
 
-	server, err := StartPprofServer("api", false, "localhost:6060")
+	pprofServer, err := NewPprofServer("api", false, "localhost:6060")
 	if err != nil {
-		t.Fatalf("Failed to start pprof server: %v", err)
+		t.Fatalf("Failed to create pprof server: %v", err)
 	}
-	if server != nil {
-		t.Fatalf("Expected nil server when pprof is disabled, got non-nil")
+	if pprofServer != nil {
+		t.Fatalf("Expected nil pprof server when disabled, got non-nil")
+	}
+}
+
+func TestPprofServerCloseWithDisabledServer(t *testing.T) {
+	t.Parallel()
+	
+	pprofServer, err := NewPprofServer("api", false, "localhost:6060")
+	if err != nil {
+		t.Fatalf("Failed to create pprof server: %v", err)
+	}
+	if err := pprofServer.Close(); err != nil {
+		t.Fatalf("Expected no error when closing disabled pprof server, got: %v", err)
 	}
 }

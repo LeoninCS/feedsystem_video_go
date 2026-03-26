@@ -122,7 +122,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	pprofServer, err := observability.StartPprofServer(
+	pprofServer, err := observability.NewPprofServer(
 		"Worker",
 		cfg.ObservabilityConfig.Pprof.Enabled,
 		cfg.ObservabilityConfig.Pprof.WorkerAddr,
@@ -130,13 +130,7 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to start worker pprof server: %v", err)
 	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
-		defer cancel()
-		if err := observability.Shutdown(shutdownCtx, pprofServer); err != nil {
-			log.Printf("Failed to shutdown worker pprof server: %v", err)
-		}
-	}()
+	defer pprofServer.Close()
 
 	errCh := make(chan error, 4)
 	log.Printf("Worker started, consuming queue=%s", socialQueue)

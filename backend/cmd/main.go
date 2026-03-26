@@ -66,7 +66,7 @@ func main() {
 		log.Printf("RabbitMQ connected")
 	}
 	// Pprof
-	pprofServer, err := observability.StartPprofServer(
+	pprofServer, err := observability.NewPprofServer(
 		"API",
 		cfg.ObservabilityConfig.Pprof.Enabled,
 		cfg.ObservabilityConfig.Pprof.ApiAddr,
@@ -74,13 +74,7 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to start API pprof server: %v", err)
 	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 3 * time.Second)
-		defer cancel()
-		if err := observability.Shutdown(shutdownCtx, pprofServer); err != nil {
-			log.Printf("Failed to shutdown API pprof server: %v", err)
-		}
-	}()
+	defer pprofServer.Close()
 
 	// 设置路由
 	r := apphttp.SetRouter(sqlDB, cache, rmq)
