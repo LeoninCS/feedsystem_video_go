@@ -10,7 +10,6 @@ import (
 	"feedsystem_video_go/internal/video"
 	"feedsystem_video_go/internal/worker"
 	"log"
-	
 	"os"
 	"os/signal"
 	"strconv"
@@ -40,7 +39,10 @@ const (
 
 func main() {
 	// 加载配置
-	const configPath = "configs/config.yaml"
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "configs/config.yaml"
+	}
 	log.Printf("Loading config from %s", configPath)
 	cfg, usedDefault, err := config.LoadLocalDev(configPath)
 	if err != nil {

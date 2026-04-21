@@ -29,19 +29,21 @@ docker compose up -d --build
 docker compose up -d mysql redis rabbitmq
 ```
 
-2) 启动后端 API：
+2) 用 compose 启 MySQL 时，宿主机端口是 `3307`。本地 Go 进程请使用面向 compose 依赖的配置文件 `backend/configs/config.compose-local.yaml`。
+
+3) 启动后端 API：
 ```bash
 cd backend
-go run ./cmd
+CONFIG_PATH=configs/config.compose-local.yaml go run ./cmd
 ```
 
-3) 启动 Worker（消费 MQ、异步落库/更新 Redis 热榜）：
+4) 启动 Worker（消费 MQ、异步落库/更新 Redis 热榜）：
 ```bash
 cd backend
-go run ./cmd/worker
+CONFIG_PATH=configs/config.compose-local.yaml go run ./cmd/worker
 ```
 
-4) 启动前端（开发模式）：
+5) 启动前端（开发模式）：
 ```bash
 cd frontend
 npm install
@@ -49,6 +51,8 @@ npm run dev
 ```
 
 前端默认使用 Vite 代理 `/api` 到 `http://127.0.0.1:8080`（见 `frontend/vite.config.ts`）。
+
+`backend/configs/config.yaml` 继续适用于本机原生 MySQL `3306` 的场景。
 
 ## Star History
 

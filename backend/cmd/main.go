@@ -9,14 +9,18 @@ import (
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"feedsystem_video_go/internal/observability"
 	"log"
+	"os"
 	"strconv"
 	"time"
 )
 
 func main() {
 	// 加载配置
-	log.Printf("Loading config from configs/config.yaml")
-	const configPath = "configs/config.yaml"
+	configPath := os.Getenv("CONFIG_PATH")
+	if configPath == "" {
+		configPath = "configs/config.yaml"
+	}
+	log.Printf("Loading config from %s", configPath)
 	cfg, usedDefault, err := config.LoadLocalDev(configPath)
 	if err != nil {
 		log.Fatalf("Failed to load config: %v", err)
