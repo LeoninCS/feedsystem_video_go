@@ -70,6 +70,14 @@ else
 end
 `)
 
+var incrementWithExpireScript = redis.NewScript(`
+local count = redis.call("INCR", KEYS[1])
+if count == 1 then
+  redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+return count
+`)
+
 func (c *Client) Unlock(ctx context.Context, key string, token string) error {
 	if c == nil || c.rdb == nil {
 		return nil
@@ -82,15 +90,10 @@ func (c *Client) IncrementWithExpire(ctx context.Context, key string, expire tim
 	if c == nil || c.rdb == nil {
 		return 0, nil
 	}
-	count, err := c.rdb.Incr(ctx, key).Result()
-	if err != nil {
-		return 0, err
-	}
-	if count == 1 {
-		err = c.rdb.Expire(ctx, key, expire).Err()
-		if err != nil {
-			return 0, err
-		}
-	}
-	return count, nil
+	return incrementWithExpireScript.Run(
+		ctx,
+		c.rdb,
+		[]string{key},
+		expire.Milliseconds(),
+	).Int64()
 }
