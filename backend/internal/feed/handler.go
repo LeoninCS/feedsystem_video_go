@@ -37,6 +37,7 @@ func (f *FeedHandler) ListLatest(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
 	c.JSON(200, feedItems)
 }
 
@@ -85,6 +86,7 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
 	c.JSON(200, feedItems)
 }
 
@@ -110,6 +112,7 @@ func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	feedItems.VideoList = nonNilFeedVideoItems(feedItems.VideoList)
 	c.JSON(200, feedItems)
 }
 
@@ -160,5 +163,13 @@ func (f *FeedHandler) ListByPopularity(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	resp.VideoList = nonNilFeedVideoItems(resp.VideoList)
 	c.JSON(200, resp)
+}
+
+func nonNilFeedVideoItems(items []FeedVideoItem) []FeedVideoItem {
+	if items == nil {
+		return []FeedVideoItem{}
+	}
+	return items
 }

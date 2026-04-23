@@ -1,6 +1,7 @@
 package social
 
 import (
+	"feedsystem_video_go/internal/account"
 	"feedsystem_video_go/internal/middleware/jwt"
 	"net/http"
 
@@ -89,6 +90,9 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if followers == nil {
+		followers = []*account.Account{}
+	}
 	c.JSON(http.StatusOK, GetAllFollowersResponse{Followers: followers})
 }
 
@@ -113,6 +117,9 @@ func (h *SocialHandler) GetAllVloggers(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+	if vloggers == nil {
+		vloggers = []*account.Account{}
 	}
 	c.JSON(http.StatusOK, GetAllVloggersResponse{Vloggers: vloggers})
 }

@@ -106,5 +106,8 @@ func (lh *LikeHandler) ListMyLikedVideos(c *gin.Context) {
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
+	if videos == nil {
+		videos = []Video{}
+	}
 	c.JSON(200, videos)
 }

@@ -90,5 +90,8 @@ func (h *CommentHandler) GetAllComments(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	if comments == nil {
+		comments = []Comment{}
+	}
 	c.JSON(200, comments)
 }

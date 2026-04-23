@@ -1,8 +1,10 @@
 import { postJson } from './client'
+import { normalizeCommentList } from './normalize'
 import type { Comment, MessageResponse } from './types'
 
-export function listAll(videoId: number) {
-  return postJson<Comment[]>('/comment/listAll', { video_id: videoId })
+export async function listAll(videoId: number) {
+  const comments = await postJson<Comment[] | null>('/comment/listAll', { video_id: videoId })
+  return normalizeCommentList(comments)
 }
 
 export function publish(videoId: number, content: string) {

@@ -207,6 +207,9 @@ func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	if videos == nil {
+		videos = []Video{}
+	}
 	c.JSON(200, videos)
 }
 
