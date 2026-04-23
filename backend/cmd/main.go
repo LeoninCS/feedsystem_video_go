@@ -78,7 +78,9 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to start API pprof server: %v", err)
 	}
-	defer pprofServer.Close()
+	if pprofServer != nil {
+		defer pprofServer.Close()
+	}
 
 	// 设置路由
 	r := apphttp.SetRouter(sqlDB, cache, rmq)

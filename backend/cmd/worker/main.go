@@ -132,7 +132,9 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to start worker pprof server: %v", err)
 	}
-	defer pprofServer.Close()
+	if pprofServer != nil {
+		defer pprofServer.Close()
+	}
 
 	errCh := make(chan error, 4)
 	log.Printf("Worker started, consuming queue=%s", socialQueue)
