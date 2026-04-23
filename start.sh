@@ -27,6 +27,15 @@ STOP_DOCKER="${STOP_DOCKER:-0}"
 FRONTEND_INSTALL="${FRONTEND_INSTALL:-auto}"
 FRONTEND_SCRIPT="${FRONTEND_SCRIPT:-dev}"
 
+# backend:
+# - CONFIG_PATH can override the backend config. When this script also starts
+#   compose dependencies, default to the compose-local config that uses host
+#   port 3307 for MySQL.
+if [ -z "${CONFIG_PATH:-}" ] && [ "$START_RABBITMQ" = "1" ]; then
+  CONFIG_PATH="configs/config.compose-local.yaml"
+fi
+export CONFIG_PATH
+
 # redis:
 # - If you already run Redis elsewhere, this will detect it (when redis-cli exists) and skip.
 REDIS_HOST="${REDIS_HOST:-127.0.0.1}"
