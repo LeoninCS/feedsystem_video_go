@@ -125,7 +125,7 @@ async function onLogin() {
   busy.value = true
   try {
     const res = await accountApi.login(username, password)
-    auth.setToken(res.token)
+    auth.setTokens(res.token, res.refresh_token ?? '')
     toast.success('登录成功')
     await social.refreshMine()
     await loadMyVideos()

@@ -5,6 +5,7 @@ const props = defineProps<{
   username: string
   id?: number
   size?: number
+  src?: string
 }>()
 
 function hashToHue(input: string) {
@@ -33,7 +34,8 @@ const bg = computed(() => {
 </script>
 
 <template>
-  <div class="avatar" :style="{ width: sizePx, height: sizePx, backgroundImage: bg }" aria-hidden="true">
+  <img v-if="src" :src="src" class="avatar" :style="{ width: sizePx, height: sizePx }" alt="" />
+  <div v-else class="avatar" :style="{ width: sizePx, height: sizePx, backgroundImage: bg }" aria-hidden="true">
     {{ initial }}
   </div>
 </template>
@@ -49,6 +51,7 @@ const bg = computed(() => {
   font-weight: 900;
   letter-spacing: 0.2px;
   user-select: none;
+  object-fit: cover;
 }
 </style>
 
