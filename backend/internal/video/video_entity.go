@@ -14,7 +14,6 @@ type Video struct {
 	LikesCount  int64     `gorm:"column:likes_count;not null;default:0;index:idx_videos_likes_count_id,priority:1,sort:desc" json:"likes_count"`
 	Popularity  int64     `gorm:"column:popularity;not null;default:0;index:idx_videos_popularity_time_id,priority:1,sort:desc" json:"popularity"`
 }
-}
 
 type PublishVideoRequest struct {
 	Title       string `json:"title"`
