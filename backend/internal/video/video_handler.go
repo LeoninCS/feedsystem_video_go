@@ -93,7 +93,12 @@ func (vh *VideoHandler) UploadVideo(c *gin.Context) {
 		return
 	}
 
-	filename := randHex(16) + ext
+	filename, err := randHex(16)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate filename"})
+		return
+	}
+	filename = filename + ext
 	absPath := filepath.Join(absDir, filename)
 
 	if err := c.SaveUploadedFile(f, absPath); err != nil {
@@ -145,7 +150,12 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 		return
 	}
 
-	filename := randHex(16) + ext
+	filename, err := randHex(16)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate filename"})
+		return
+	}
+	filename = filename + ext
 	absPath := filepath.Join(absDir, filename)
 
 	if err := c.SaveUploadedFile(f, absPath); err != nil {
@@ -161,10 +171,12 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 	})
 }
 
-func randHex(n int) string {
+func randHex(n int) (string, error) {
 	b := make([]byte, n)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("rand.Read: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func buildAbsoluteURL(c *gin.Context, p string) string {

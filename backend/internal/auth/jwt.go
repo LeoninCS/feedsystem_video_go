@@ -2,7 +2,10 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"log"
 	"os"
 	"time"
 
@@ -12,7 +15,13 @@ import (
 func jwtSecret() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "change-me-in-env"
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			log.Printf("FATAL: cannot generate JWT secret: %v", err)
+			return []byte("fallback-unsafe-key-change-me")
+		}
+		secret = hex.EncodeToString(b)
+		log.Printf("WARNING: JWT_SECRET not set, generated random key. All tokens invalid on restart.")
 	}
 	return []byte(secret)
 }

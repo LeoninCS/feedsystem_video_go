@@ -9,6 +9,7 @@ import ChangePasswordView from '../views/ChangePasswordView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -16,14 +17,23 @@ const router = createRouter({
     { path: '/', name: 'home', component: HomeView },
     { path: '/feed', redirect: '/' },
     { path: '/hot', name: 'hot', component: HotView },
-    { path: '/video', name: 'video', component: VideoView },
+    { path: '/video', name: 'video', component: VideoView, meta: { requiresAuth: true } },
     { path: '/video/:id', name: 'video-detail', component: VideoDetailView, props: true },
     { path: '/account', name: 'account', component: AccountView },
     { path: '/account/register', name: 'account-register', component: RegisterView },
     { path: '/account/change-password', name: 'account-change-password', component: ChangePasswordView },
-    { path: '/settings', name: 'settings', component: SettingsView },
+    { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     { path: '/u/:id', name: 'user-profile', component: UserProfileView, props: true },
   ],
+})
+
+router.beforeEach((to, _from, next) => {
+  const auth = useAuthStore()
+  if (to.meta.requiresAuth && !auth.isLoggedIn) {
+    next({ path: '/account', query: { redirect: to.fullPath } })
+    return
+  }
+  next()
 })
 
 export default router
