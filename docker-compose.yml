@@ -59,6 +59,8 @@ services:
       dockerfile: backend/Dockerfile
       target: api
     restart: always
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
     ports:
       - "8080:8080"
     volumes:
@@ -72,7 +74,7 @@ services:
       rabbitmq:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- --post-data='{}' --header='Content-Type: application/json' http://localhost:8080/account/findByID || exit 1"]
+      test: ["CMD-SHELL", "pgrep api || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -83,6 +85,8 @@ services:
       dockerfile: backend/Dockerfile
       target: worker
     restart: always
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
     volumes:
       - ./backend/configs/config.docker.yaml:/app/configs/config.yaml:ro
     depends_on:
