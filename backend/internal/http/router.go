@@ -4,6 +4,7 @@ import (
 	"context"
 	"feedsystem_video_go/internal/account"
 	"feedsystem_video_go/internal/feed"
+	"feedsystem_video_go/internal/message"
 	"feedsystem_video_go/internal/middleware/jwt"
 	"feedsystem_video_go/internal/middleware/ratelimit"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
@@ -166,11 +167,24 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 		feedGroup.POST("/listLatest", feedHandler.ListLatest)
 		feedGroup.POST("/listLikesCount", feedHandler.ListLikesCount)
 		feedGroup.POST("/listByPopularity", feedHandler.ListByPopularity)
+		feedGroup.POST("/listByTag", feedHandler.ListByTag)
 	}
 	protectedFeedGroup := feedGroup.Group("")
 	protectedFeedGroup.Use(jwt.JWTAuth(accountRepository, cache))
 	{
 		protectedFeedGroup.POST("/listByFollowing", feedHandler.ListByFollowing)
+	}
+	// message
+	messageRepo := message.NewRepository(db)
+	_ = messageRepo.AutoMigrate(context.Background())
+	messageService := message.NewService(messageRepo)
+	messageHandler := message.NewHandler(messageService)
+	messageGroup := r.Group("/message")
+	protectedMessageGroup := messageGroup.Group("")
+	protectedMessageGroup.Use(jwt.JWTAuth(accountRepository, cache))
+	{
+		protectedMessageGroup.POST("/send", messageHandler.Send)
+		protectedMessageGroup.POST("/list", messageHandler.List)
 	}
 	//worker
 	timelineMQ, err := rabbitmq.NewTimelineMQ(rmq)

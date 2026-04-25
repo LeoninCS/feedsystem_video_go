@@ -545,3 +545,11 @@ func buildOrderedResult(orderedIDs []uint, dataMap map[uint]*video.Video) []*vid
 	}
 	return res
 }
+
+func (f *FeedService) ListByTag(ctx context.Context, tagName string, limit int, viewerAccountID uint) ([]FeedVideoItem, error) {
+	videos, err := f.repo.ListByTag(ctx, tagName, limit)
+	if err != nil {
+		return nil, err
+	}
+	return f.buildFeedVideos(ctx, videos, viewerAccountID)
+}

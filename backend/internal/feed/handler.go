@@ -174,3 +174,28 @@ func nonNilFeedVideoItems(items []FeedVideoItem) []FeedVideoItem {
 	}
 	return items
 }
+
+func (h *FeedHandler) ListByTag(c *gin.Context) {
+	var req struct {
+		TagName string `json:"tag_name"`
+		Limit   int    `json:"limit"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if req.TagName == "" {
+		c.JSON(400, gin.H{"error": "tag_name is required"})
+		return
+	}
+	if req.Limit <= 0 || req.Limit > 50 {
+		req.Limit = 10
+	}
+	viewerAccountID, _ := jwt.GetAccountID(c)
+	items, err := h.service.ListByTag(c.Request.Context(), req.TagName, req.Limit, viewerAccountID)
+	if err != nil {
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, gin.H{"video_list": nonNilFeedVideoItems(items)})
+}
