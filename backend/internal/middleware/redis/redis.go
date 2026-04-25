@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"feedsystem_video_go/internal/config"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -12,8 +13,11 @@ import (
 )
 
 type Client struct {
-	rdb *redis.Client
+	rdb       *redis.Client
+	keyPrefix string
 }
+
+const defaultKeyPrefix = "v1:"
 
 func NewFromEnv(cfg *config.RedisConfig) (*Client, error) {
 	rdb := redis.NewClient(&redis.Options{
@@ -21,7 +25,7 @@ func NewFromEnv(cfg *config.RedisConfig) (*Client, error) {
 		Password: cfg.Password,
 		DB:       cfg.DB,
 	})
-	return &Client{rdb: rdb}, nil
+	return &Client{rdb: rdb, keyPrefix: defaultKeyPrefix}, nil
 }
 
 func (c *Client) Close() error {
@@ -40,6 +44,14 @@ func (c *Client) Ping(ctx context.Context) error {
 
 func IsMiss(err error) bool {
 	return err == redis.Nil
+}
+
+func (c *Client) Key(format string, args ...any) string {
+	prefix := ""
+	if c != nil {
+		prefix = c.keyPrefix
+	}
+	return prefix + fmt.Sprintf(format, args...)
 }
 
 func randToken(n int) (string, error) {

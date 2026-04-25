@@ -67,7 +67,7 @@ func StartConsumer(tmq *rabbitmq.TimelineMQ, queueName string, redisClient *redi
 			}
 
 			ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-			timelineKey := "feed:global_timeline"
+			timelineKey := redisClient.Key("feed:global_timeline")
 			err = redisClient.ZAdd(ctx, timelineKey, oredis.Z{
 				Score:  float64(event.CreateTime),
 				Member: fmt.Sprintf("%d", event.VideoID),

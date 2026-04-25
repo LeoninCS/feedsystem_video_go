@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"feedsystem_video_go/internal/auth"
-	"fmt"
 	"log"
 	"time"
 
@@ -65,7 +64,7 @@ func (as *AccountService) Rename(ctx context.Context, accountID uint, newUsernam
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
 
-		if err := as.cache.SetBytes(cacheCtx, fmt.Sprintf("account:%d", accountID), []byte(token), 24*time.Hour); err != nil {
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", accountID), []byte(token), 24*time.Hour); err != nil {
 			log.Printf("failed to set cache: %v", err)
 		}
 	}
@@ -129,7 +128,7 @@ func (as *AccountService) Login(ctx context.Context, username, password string) 
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
 
-		if err := as.cache.SetBytes(cacheCtx, fmt.Sprintf("account:%d", account.ID), []byte(token), 24*time.Hour); err != nil {
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(token), 24*time.Hour); err != nil {
 			log.Printf("failed to set cache: %v", err)
 		}
 	}
@@ -148,7 +147,7 @@ func (as *AccountService) Logout(ctx context.Context, accountID uint) error {
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
 
-		if err := as.cache.Del(cacheCtx, fmt.Sprintf("account:%d", account.ID)); err != nil {
+		if err := as.cache.Del(cacheCtx, as.cache.Key("account:%d", account.ID)); err != nil {
 			log.Printf("failed to del cache: %v", err)
 		}
 	}
