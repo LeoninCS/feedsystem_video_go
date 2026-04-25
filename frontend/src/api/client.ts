@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/auth'
+import { reportError } from '../utils/error-reporter'
 
 export class ApiError extends Error {
   status: number
@@ -51,7 +52,9 @@ export async function postJson<T>(path: string, body: unknown, options?: { authR
       data && typeof data === 'object' && (data as ApiErrorBody).error
         ? String((data as ApiErrorBody).error)
         : `请求失败 (${res.status})`
-    throw new ApiError(msg, res.status, data)
+    const apiErr = new ApiError(msg, res.status, data)
+    reportError(apiErr, { path, status: res.status })
+    throw apiErr
   }
 
   return data as T
@@ -92,7 +95,9 @@ export async function postForm<T>(path: string, body: FormData, options?: { auth
       data && typeof data === 'object' && (data as ApiErrorBody).error
         ? String((data as ApiErrorBody).error)
         : `请求失败 (${res.status})`
-    throw new ApiError(msg, res.status, data)
+    const apiErr = new ApiError(msg, res.status, data)
+    reportError(apiErr, { path, status: res.status })
+    throw apiErr
   }
 
   return data as T
