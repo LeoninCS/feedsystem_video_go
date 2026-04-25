@@ -1,4 +1,4 @@
-package http
+package apierror
 
 import (
 	"errors"

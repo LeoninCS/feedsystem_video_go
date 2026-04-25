@@ -11,7 +11,7 @@ import (
 
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
-	httputil "feedsystem_video_go/internal/http"
+	"feedsystem_video_go/internal/apierror"
 
 	"gorm.io/gorm"
 )
@@ -77,7 +77,7 @@ func (vs *VideoService) Delete(ctx context.Context, id uint, authorID uint) erro
 		return errors.New("video not found")
 	}
 	if video.AuthorID != authorID {
-		return httputil.ErrUnauthorized
+		return apierror.ErrUnauthorized
 	}
 	if err := vs.repo.DeleteVideo(ctx, id); err != nil {
 		return err
