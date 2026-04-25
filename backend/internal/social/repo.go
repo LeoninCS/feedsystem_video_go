@@ -30,6 +30,7 @@ func (r *SocialRepository) GetAllFollowers(ctx context.Context, VloggerID uint) 
 	if err := r.db.WithContext(ctx).
 		Model(&Social{}).
 		Where("vlogger_id = ?", VloggerID).
+		Limit(200).
 		Find(&relations).Error; err != nil {
 		return nil, err
 	}
@@ -57,6 +58,7 @@ func (r *SocialRepository) GetAllVloggers(ctx context.Context, FollowerID uint) 
 	if err := r.db.WithContext(ctx).
 		Model(&Social{}).
 		Where("follower_id = ?", FollowerID).
+		Limit(200).
 		Find(&relations).Error; err != nil {
 		return nil, err
 	}
