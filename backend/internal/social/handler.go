@@ -2,6 +2,7 @@ package social
 
 import (
 	"feedsystem_video_go/internal/account"
+	httputil "feedsystem_video_go/internal/http"
 	"feedsystem_video_go/internal/middleware/jwt"
 	"net/http"
 
@@ -19,7 +20,7 @@ func NewSocialHandler(service *SocialService) *SocialHandler {
 func (h *SocialHandler) Follow(c *gin.Context) {
 	var req FollowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VloggerID <= 0 {
@@ -36,7 +37,7 @@ func (h *SocialHandler) Follow(c *gin.Context) {
 		VloggerID:  req.VloggerID,
 	}
 	if err := h.service.Follow(c.Request.Context(), social); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "followed"})
@@ -45,7 +46,7 @@ func (h *SocialHandler) Follow(c *gin.Context) {
 func (h *SocialHandler) Unfollow(c *gin.Context) {
 	var req UnfollowRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VloggerID <= 0 {
@@ -62,7 +63,7 @@ func (h *SocialHandler) Unfollow(c *gin.Context) {
 		VloggerID:  req.VloggerID,
 	}
 	if err := h.service.Unfollow(c.Request.Context(), social); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "unfollowed"})
@@ -71,7 +72,7 @@ func (h *SocialHandler) Unfollow(c *gin.Context) {
 func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 	var req GetAllFollowersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -87,7 +88,7 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 
 	followers, err := h.service.GetAllFollowers(c.Request.Context(), vloggerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if followers == nil {
@@ -99,7 +100,7 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 func (h *SocialHandler) GetAllVloggers(c *gin.Context) {
 	var req GetAllVloggersRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -115,7 +116,7 @@ func (h *SocialHandler) GetAllVloggers(c *gin.Context) {
 
 	vloggers, err := h.service.GetAllVloggers(c.Request.Context(), followerID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if vloggers == nil {

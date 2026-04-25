@@ -2,6 +2,7 @@ package video
 
 import (
 	"feedsystem_video_go/internal/account"
+	httputil "feedsystem_video_go/internal/http"
 	"feedsystem_video_go/internal/middleware/jwt"
 
 	"github.com/gin-gonic/gin"
@@ -18,7 +19,7 @@ func NewCommentHandler(service *CommentService, accountService *account.AccountS
 func (h *CommentHandler) PublishComment(c *gin.Context) {
 	var req PublishCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.Content == "" {
@@ -31,12 +32,12 @@ func (h *CommentHandler) PublishComment(c *gin.Context) {
 	}
 	authorId, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	user, err := h.accountService.FindByID(c.Request.Context(), authorId)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	comment := &Comment{
@@ -46,7 +47,7 @@ func (h *CommentHandler) PublishComment(c *gin.Context) {
 		Content:  req.Content,
 	}
 	if err := h.service.Publish(c.Request.Context(), comment); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"message": "comment published successfully"})
@@ -55,12 +56,12 @@ func (h *CommentHandler) PublishComment(c *gin.Context) {
 func (h *CommentHandler) DeleteComment(c *gin.Context) {
 	var req DeleteCommentRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	accountID, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.CommentID <= 0 {
@@ -68,7 +69,7 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 		return
 	}
 	if err := h.service.Delete(c.Request.Context(), req.CommentID, accountID); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -78,7 +79,7 @@ func (h *CommentHandler) DeleteComment(c *gin.Context) {
 func (h *CommentHandler) GetAllComments(c *gin.Context) {
 	var req GetAllCommentsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VideoID == 0 {
@@ -87,7 +88,7 @@ func (h *CommentHandler) GetAllComments(c *gin.Context) {
 	}
 	comments, err := h.service.GetAll(c.Request.Context(), req.VideoID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if comments == nil {

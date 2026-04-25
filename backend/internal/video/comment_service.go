@@ -5,6 +5,7 @@ import (
 	"errors"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
+	httputil "feedsystem_video_go/internal/http"
 	"strings"
 
 	"gorm.io/gorm"
@@ -94,7 +95,7 @@ func (s *CommentService) Delete(ctx context.Context, commentID uint, accountID u
 		return errors.New("comment not found")
 	}
 	if comment.AuthorID != accountID {
-		return errors.New("permission denied")
+		return httputil.ErrUnauthorized
 	}
 	if s.commentMQ != nil {
 		if err := s.commentMQ.Delete(ctx, commentID); err == nil {
