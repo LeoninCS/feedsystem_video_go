@@ -126,7 +126,35 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 		protectedSocialGroup.POST("/unfollow", socialLimiter, socialHandler.Unfollow)
 		protectedSocialGroup.POST("/getAllFollowers", socialHandler.GetAllFollowers)
 		protectedSocialGroup.POST("/getAllVloggers", socialHandler.GetAllVloggers)
+		protectedSocialGroup.POST("/getCounts", socialHandler.GetCounts)
 	}
+
+	accountGroup.POST("/getProfile", func(c *gin.Context) {
+		var req account.GetProfileRequest
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(400, gin.H{"error": err.Error()})
+			return
+		}
+		if req.AccountID == 0 {
+			c.JSON(400, gin.H{"error": "account_id is required"})
+			return
+		}
+		acc, err := accountService.FindByID(c.Request.Context(), req.AccountID)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		videoCount, _ := videoRepository.CountByAuthor(c.Request.Context(), req.AccountID)
+		totalLikes, _ := videoRepository.TotalLikesByAuthor(c.Request.Context(), req.AccountID)
+		followerCount, _ := socialRepository.CountFollowers(c.Request.Context(), req.AccountID)
+		vloggerCount, _ := socialRepository.CountVloggers(c.Request.Context(), req.AccountID)
+
+		c.JSON(200, account.GetProfileResponse{
+			Account: account.FindByIDResponse{ID: acc.ID, Username: acc.Username, AvatarURL: acc.AvatarURL, Bio: acc.Bio},
+			VideoCount: videoCount, TotalLikes: totalLikes,
+			FollowerCount: followerCount, VloggerCount: vloggerCount,
+		})
+	})
 	// feed
 	feedRepository := feed.NewFeedRepository(db)
 	feedService := feed.NewFeedService(feedRepository, likeRepository, cache)

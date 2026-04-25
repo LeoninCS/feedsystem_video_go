@@ -94,7 +94,8 @@ func (h *SocialHandler) GetAllFollowers(c *gin.Context) {
 	if followers == nil {
 		followers = []*account.Account{}
 	}
-	c.JSON(http.StatusOK, GetAllFollowersResponse{Followers: followers})
+	followerCount, _ := h.service.CountFollowers(c.Request.Context(), vloggerID)
+	c.JSON(http.StatusOK, GetAllFollowersResponse{Followers: followers, FollowerCount: followerCount})
 }
 
 func (h *SocialHandler) GetAllVloggers(c *gin.Context) {
@@ -122,5 +123,17 @@ func (h *SocialHandler) GetAllVloggers(c *gin.Context) {
 	if vloggers == nil {
 		vloggers = []*account.Account{}
 	}
-	c.JSON(http.StatusOK, GetAllVloggersResponse{Vloggers: vloggers})
+	vloggerCount, _ := h.service.CountVloggers(c.Request.Context(), followerID)
+	c.JSON(http.StatusOK, GetAllVloggersResponse{Vloggers: vloggers, VloggerCount: vloggerCount})
+}
+
+func (h *SocialHandler) GetCounts(c *gin.Context) {
+	accountID, err := jwt.GetAccountID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+	followerCount, _ := h.service.CountFollowers(c.Request.Context(), accountID)
+	vloggerCount, _ := h.service.CountVloggers(c.Request.Context(), accountID)
+	c.JSON(http.StatusOK, SocialCounts{FollowerCount: followerCount, VloggerCount: vloggerCount})
 }

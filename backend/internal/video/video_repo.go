@@ -102,3 +102,19 @@ func (vr *VideoRepository) ChangePopularity(ctx context.Context, id uint, change
 	}
 	return nil
 }
+
+func (vr *VideoRepository) CountByAuthor(ctx context.Context, authorID uint) (int64, error) {
+	var count int64
+	if err := vr.db.WithContext(ctx).Model(&Video{}).Where("author_id = ?", authorID).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (vr *VideoRepository) TotalLikesByAuthor(ctx context.Context, authorID uint) (int64, error) {
+	var total int64
+	if err := vr.db.WithContext(ctx).Model(&Video{}).Where("author_id = ?", authorID).Select("COALESCE(SUM(likes_count), 0)").Scan(&total).Error; err != nil {
+		return 0, err
+	}
+	return total, nil
+}
