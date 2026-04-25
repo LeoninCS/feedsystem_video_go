@@ -58,8 +58,13 @@ func (w *SocialWorker) Run(ctx context.Context) error {
 
 func (w *SocialWorker) handleDelivery(ctx context.Context, d amqp.Delivery) {
 	if err := w.process(ctx, d.Body); err != nil {
-		log.Printf("social worker: failed to process message: %v", err)
-		// 重新入队，稍后重试
+		retryCount := rabbitmq.GetRetryCount(d)
+		if retryCount >= rabbitmq.MaxRetryCount {
+			log.Printf("social worker: max retries exceeded (%d), moving to DLX: %v", retryCount, err)
+			_ = d.Ack(false)
+			return
+		}
+		log.Printf("social worker: failed (retry %d/%d): %v", retryCount+1, rabbitmq.MaxRetryCount, err)
 		_ = d.Nack(false, true)
 		return
 	}
