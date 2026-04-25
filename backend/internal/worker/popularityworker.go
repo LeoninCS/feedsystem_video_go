@@ -58,7 +58,13 @@ func (w *PopularityWorker) Run(ctx context.Context) error {
 
 func (w *PopularityWorker) handleDelivery(ctx context.Context, d amqp.Delivery) {
 	if err := w.process(ctx, d.Body); err != nil {
-		log.Printf("popularity worker: failed to process message: %v", err)
+		retryCount := rabbitmq.GetRetryCount(d)
+		if retryCount >= rabbitmq.MaxRetryCount {
+			log.Printf("popularity worker: max retries exceeded (%d), moving to DLX: %v", retryCount, err)
+			_ = d.Ack(false)
+			return
+		}
+		log.Printf("popularity worker: failed (retry %d/%d): %v", retryCount+1, rabbitmq.MaxRetryCount, err)
 		_ = d.Nack(false, true)
 		return
 	}
