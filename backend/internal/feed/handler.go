@@ -2,7 +2,7 @@ package feed
 
 import (
 	"feedsystem_video_go/internal/middleware/jwt"
-	httputil "feedsystem_video_go/internal/http"
+	"feedsystem_video_go/internal/apierror"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +19,7 @@ func NewFeedHandler(service *FeedService) *FeedHandler {
 func (f *FeedHandler) ListLatest(c *gin.Context) {
 	var req ListLatestRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -45,7 +45,7 @@ func (f *FeedHandler) ListLatest(c *gin.Context) {
 func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 	var req ListLikesCountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -94,7 +94,7 @@ func (f *FeedHandler) ListLikesCount(c *gin.Context) {
 func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 	var req ListByFollowingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
@@ -120,7 +120,7 @@ func (f *FeedHandler) ListByFollowing(c *gin.Context) {
 func (f *FeedHandler) ListByPopularity(c *gin.Context) {
 	var req ListByPopularityRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(httputil.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.Limit <= 0 || req.Limit > 50 {
