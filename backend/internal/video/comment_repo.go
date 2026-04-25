@@ -24,7 +24,11 @@ func (r *CommentRepository) DeleteComment(ctx context.Context, comment *Comment)
 
 func (r *CommentRepository) GetAllComments(ctx context.Context, videoID uint) ([]Comment, error) {
 	var comments []Comment
-	err := r.db.WithContext(ctx).Where("video_id = ?", videoID).Find(&comments).Error
+	err := r.db.WithContext(ctx).
+		Where("video_id = ?", videoID).
+		Order("created_at asc").
+		Limit(200).
+		Find(&comments).Error
 	return comments, err
 }
 

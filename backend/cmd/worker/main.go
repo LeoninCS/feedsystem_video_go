@@ -9,6 +9,7 @@ import (
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
 	"feedsystem_video_go/internal/worker"
+	mqrabbit "feedsystem_video_go/internal/middleware/rabbitmq"
 	"log"
 	"os"
 	"os/signal"
@@ -194,7 +195,7 @@ func declareSocialTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -231,7 +232,7 @@ func declarePopularityTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -265,7 +266,7 @@ func declareLikeTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -299,7 +300,7 @@ func declareCommentTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
