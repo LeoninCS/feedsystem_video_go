@@ -71,6 +71,11 @@ const filteredItems = computed(() => {
 })
 
 const activeItem = computed(() => filteredItems.value[activeIndex.value] ?? null)
+const visibleRange = computed(() => {
+  const idx = activeIndex.value
+  const len = filteredItems.value.length
+  return { start: Math.max(0, idx - 1), end: Math.min(len - 1, idx + 1) }
+})
 const myAccountId = computed(() => auth.claims?.account_id ?? 0)
 
 function setVideoRef(id: number, el: HTMLVideoElement | null) {
@@ -459,6 +464,7 @@ onBeforeUnmount(() => {
         <section
           v-for="(item, idx) in filteredItems"
           :key="`${tab}-${item.id}`"
+          v-show="idx >= visibleRange.start && idx <= visibleRange.end"
           class="slide"
           :class="{ active: idx === activeIndex }"
         >
