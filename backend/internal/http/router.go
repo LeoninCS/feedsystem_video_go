@@ -176,7 +176,6 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 	}
 	// message
 	messageRepo := message.NewRepository(db)
-	_ = messageRepo.AutoMigrate(context.Background())
 	messageService := message.NewService(messageRepo)
 	messageHandler := message.NewHandler(messageService)
 	messageGroup := r.Group("/message")
