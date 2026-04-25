@@ -75,7 +75,7 @@ async function onLogout() {
     const msg = e instanceof ApiError ? e.message : String(e)
     toast.error(`登出失败：${msg}`)
   } finally {
-    auth.clearToken()
+    auth.clearTokens()
     rename.open = false
     toast.info('已退出登录')
     busy.value = false
