@@ -1,5 +1,8 @@
 .run/
 backend/.run/
+data/
+.sisyphus/
+docs/
 
 #
 # Binaries for programs and plugins
@@ -31,4 +34,3 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
-
