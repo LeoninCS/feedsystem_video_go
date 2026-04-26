@@ -17,7 +17,7 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_0900_ai_ci
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p123456 --silent"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -25,13 +25,15 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-123456}
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-123456}"]
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "123456", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -61,6 +63,11 @@ services:
     restart: always
     environment:
       JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-feedsystem}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-123456}
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-password123}
     ports:
       - "8080:8080"
     volumes:
@@ -87,6 +94,11 @@ services:
     restart: always
     environment:
       JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-feedsystem}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-123456}
+      RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_PASS: ${RABBITMQ_PASS:-password123}
     volumes:
       - ./backend/configs/config.docker.yaml:/app/configs/config.yaml:ro
     depends_on:

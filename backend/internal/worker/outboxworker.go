@@ -15,6 +15,11 @@ import (
 )
 
 func StartOutboxPoller(db *gorm.DB, tmq *rabbitmq.TimelineMQ) {
+	if db == nil || tmq == nil || tmq.RabbitMQ == nil || tmq.Ch == nil {
+		log.Printf("Outbox poller disabled: timeline mq is not initialized")
+		return
+	}
+
 	go func() {
 		for {
 			var messages []video.OutboxMsg
@@ -40,6 +45,15 @@ func StartOutboxPoller(db *gorm.DB, tmq *rabbitmq.TimelineMQ) {
 }
 
 func StartConsumer(tmq *rabbitmq.TimelineMQ, queueName string, redisClient *redis.Client) {
+	if tmq == nil || tmq.RabbitMQ == nil || tmq.Ch == nil {
+		log.Printf("Timeline consumer disabled: timeline mq is not initialized")
+		return
+	}
+	if redisClient == nil {
+		log.Printf("Timeline consumer disabled: redis is not initialized")
+		return
+	}
+
 	msgs, err := tmq.Ch.Consume(
 		queueName,
 		"",
