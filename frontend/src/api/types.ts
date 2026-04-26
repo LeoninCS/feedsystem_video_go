@@ -1,5 +1,18 @@
 export type MessageResponse = { message: string }
 
+export type DirectMessage = {
+  id: number
+  from_id: number
+  to_id: number
+  content: string
+  is_read: boolean
+  created_at: string
+}
+
+export type ListMessagesResponse = {
+  messages: DirectMessage[]
+}
+
 export type TokenResponse = { token: string; refresh_token?: string; account_id?: number; username?: string }
 
 export type Account = {

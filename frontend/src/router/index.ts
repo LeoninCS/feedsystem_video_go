@@ -9,6 +9,7 @@ import ChangePasswordView from '../views/ChangePasswordView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import UserProfileView from '../views/UserProfileView.vue'
+import MessageView from '../views/MessageView.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
@@ -24,6 +25,8 @@ const router = createRouter({
     { path: '/account/change-password', name: 'account-change-password', component: ChangePasswordView },
     { path: '/settings', name: 'settings', component: SettingsView, meta: { requiresAuth: true } },
     { path: '/u/:id', name: 'user-profile', component: UserProfileView, props: true },
+    { path: '/messages', name: 'message-list', component: MessageView, meta: { requiresAuth: true } },
+    { path: '/messages/:peerId', name: 'messages', component: MessageView, meta: { requiresAuth: true } },
   ],
 })
 

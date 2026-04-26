@@ -105,6 +105,16 @@ async function toggleFollow() {
   }
 }
 
+async function goMessage() {
+  if (isMe.value) return
+  if (!auth.isLoggedIn) {
+    toast.error('请先登录')
+    await router.push({ path: '/account', query: { redirect: route.fullPath } })
+    return
+  }
+  await router.push(`/messages/${userId.value}`)
+}
+
 type ListTab = 'followers' | 'following'
 const drawer = reactive({
   open: false,
@@ -169,9 +179,12 @@ onMounted(loadProfile)
 
         <div class="row">
           <button v-if="isMe" class="ghost" type="button" @click="router.push('/account')">我的账号</button>
-          <button v-else class="primary" type="button" :disabled="!state.user || state.loading" @click="toggleFollow">
-            {{ isFollowing ? '已关注' : '关注' }}
-          </button>
+          <template v-else>
+            <button class="ghost" type="button" :disabled="!state.user || state.loading" @click="goMessage">私信</button>
+            <button class="primary" type="button" :disabled="!state.user || state.loading" @click="toggleFollow">
+              {{ isFollowing ? '已关注' : '关注' }}
+            </button>
+          </template>
         </div>
       </div>
 
@@ -241,10 +254,10 @@ onMounted(loadProfile)
 
 <style scoped>
 .ghost {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(0, 0, 0, 0.18);
-  color: rgba(255, 255, 255, 0.86);
-  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.055);
+  color: var(--text);
+  border-radius: 8px;
   padding: 10px 12px;
   cursor: pointer;
 }
@@ -254,9 +267,9 @@ onMounted(loadProfile)
 }
 
 .metric {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  border-radius: 8px;
   padding: 12px 14px;
   min-width: 120px;
   cursor: pointer;
@@ -286,15 +299,15 @@ onMounted(loadProfile)
 
 .metric-label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.65);
+  color: var(--muted);
 }
 
 .hint {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
 }
 
 .hint.bad {
-  color: rgba(254, 44, 85, 0.92);
+  color: var(--danger);
 }
 
 .video-grid {
@@ -316,9 +329,9 @@ onMounted(loadProfile)
 }
 
 .video-card {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
   cursor: pointer;
   padding: 0;
@@ -370,9 +383,9 @@ onMounted(loadProfile)
 .drawer {
   width: min(520px, calc(100vw - 18px));
   max-height: min(78vh, 720px);
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 18px;
+  background: rgba(13, 18, 29, 0.92);
+  border: 1px solid var(--border);
+  border-radius: 8px;
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr;
@@ -383,7 +396,7 @@ onMounted(loadProfile)
   align-items: center;
   justify-content: space-between;
   padding: 14px 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border);
 }
 
 .drawer-title {
@@ -393,8 +406,8 @@ onMounted(loadProfile)
 .drawer-x {
   width: 34px;
   height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.9);
   cursor: pointer;
@@ -410,12 +423,12 @@ onMounted(loadProfile)
 }
 
 .drawer-hint {
-  color: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
   padding: 12px 0;
 }
 
 .drawer-hint.bad {
-  color: rgba(254, 44, 85, 0.92);
+  color: var(--danger);
 }
 
 .user-row {
@@ -425,8 +438,8 @@ onMounted(loadProfile)
   gap: 12px;
   align-items: center;
   padding: 10px 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  border: 1px solid var(--border);
   background: rgba(255, 255, 255, 0.05);
   cursor: pointer;
 }
@@ -445,7 +458,7 @@ onMounted(loadProfile)
 
 .user-id {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--muted);
 }
 
 .mono {
