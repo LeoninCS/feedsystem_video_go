@@ -1,4 +1,4 @@
-import { postJson } from './client'
+import { postForm, postJson } from './client'
 import type { Account, MessageResponse, TokenResponse } from './types'
 
 export function register(username: string, password: string) {
@@ -31,4 +31,18 @@ export function findById(id: number) {
 
 export function findByUsername(username: string) {
   return postJson<Account>('/account/findByUsername', { username })
+}
+
+export function uploadAvatar(file: File) {
+  const fd = new FormData()
+  fd.append('file', file)
+  return postForm<{ avatar_url: string }>('/account/uploadAvatar', fd, { authRequired: true })
+}
+
+export function updateProfile(data: { avatar_url?: string; bio?: string }) {
+  return postJson<MessageResponse>('/account/updateProfile', data, { authRequired: true })
+}
+
+export function refresh(refreshToken: string) {
+  return postJson<TokenResponse>('/account/refresh', { refresh_token: refreshToken })
 }

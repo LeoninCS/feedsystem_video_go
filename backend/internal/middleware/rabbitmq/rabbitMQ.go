@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"feedsystem_video_go/internal/config"
+	"log"
 	"strconv"
 	"time"
 
@@ -73,19 +74,25 @@ func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": DLXExchange},
 	)
 	if err != nil {
 		return err
 	}
 
-	return r.Ch.QueueBind(
+	if err := r.Ch.QueueBind(
 		q.Name,
 		bindingKey,
 		exchange,
 		false,
 		nil,
-	)
+	); err != nil {
+		return err
+	}
+	if err := DeclareDLX(r.Ch, queue); err != nil {
+		log.Printf("DLX declare failed for %s: %v", queue, err)
+	}
+	return nil
 }
 
 func (r *RabbitMQ) PublishJSON(ctx context.Context, exchange string, routingKey string, payload any) error {

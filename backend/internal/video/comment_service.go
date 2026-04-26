@@ -5,6 +5,8 @@ import (
 	"errors"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
+	"feedsystem_video_go/internal/apierror"
+	"regexp"
 	"strings"
 
 	"gorm.io/gorm"
@@ -56,6 +58,7 @@ func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 		}
 	}
 	if mysqlEnqueued && redisEnqueued {
+		s.notifyMentions(ctx, comment)
 		return nil
 	}
 
@@ -82,6 +85,7 @@ func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 	if !redisEnqueued {
 		UpdatePopularityCache(ctx, s.cache, comment.VideoID, 1)
 	}
+	s.notifyMentions(ctx, comment)
 	return nil
 }
 
@@ -94,7 +98,7 @@ func (s *CommentService) Delete(ctx context.Context, commentID uint, accountID u
 		return errors.New("comment not found")
 	}
 	if comment.AuthorID != accountID {
-		return errors.New("permission denied")
+		return apierror.ErrUnauthorized
 	}
 	if s.commentMQ != nil {
 		if err := s.commentMQ.Delete(ctx, commentID); err == nil {
@@ -113,4 +117,39 @@ func (s *CommentService) GetAll(ctx context.Context, videoID uint) ([]Comment, e
 		return nil, errors.New("video not found")
 	}
 	return s.repo.GetAllComments(ctx, videoID)
+}
+
+var mentionRegex = regexp.MustCompile(`@(\w+)`)
+
+func (s *CommentService) notifyMentions(ctx context.Context, comment *Comment) {
+	matches := mentionRegex.FindAllStringSubmatch(comment.Content, -1)
+	if len(matches) == 0 {
+		return
+	}
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		username := m[1]
+		if seen[username] || username == comment.Username {
+			continue
+		}
+		seen[username] = true
+		var accID uint
+		if err := s.repo.db.WithContext(ctx).Table("accounts").Where("username = ?", username).Select("id").Scan(&accID).Error; err != nil || accID == 0 {
+			continue
+		}
+		notif := struct {
+			RecipientID uint
+			SenderID    uint
+			Type        string
+			TargetID    uint
+			Content     string
+		}{
+			RecipientID: accID,
+			SenderID:    comment.AuthorID,
+			Type:        "mention",
+			TargetID:    comment.VideoID,
+			Content:     comment.Username + " 在评论中提到了你",
+		}
+		s.repo.db.WithContext(ctx).Table("notifications").Create(&notif)
+	}
 }

@@ -44,7 +44,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 	//L1:本地缓存
 	var missedL1 []uint
 	for _, id := range videoIDs {
-		cacheKey := fmt.Sprintf("video:entity:%d", id)
+		cacheKey := f.rediscache.Key("video:entity:%d", id)
 		if f.localcache != nil {
 			if v, found := f.localcache.Get(cacheKey); found {
 				if data, ok := v.(video.Video); ok {
@@ -66,7 +66,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 	if len(missedL1) > 0 {
 		cacheKeys := make([]string, len(missedL1))
 		for i, id := range missedL1 {
-			cacheKeys[i] = fmt.Sprintf("video:entity:%d", id)
+			cacheKeys[i] = f.rediscache.Key("video:entity:%d", id)
 		}
 
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
@@ -109,7 +109,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 		wg.Add(1)
 		go func(videoID uint) {
 			defer wg.Done()
-			sfKey := fmt.Sprintf("sf:entity:%d", videoID)
+			sfKey := f.rediscache.Key("sf:entity:%d", videoID)
 
 			v, err, _ := f.requestGroup.Do(sfKey, func() (interface{}, error) {
 				videoList, err := f.repo.GetByIDs(ctx, []uint{videoID})
@@ -119,7 +119,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 				}
 
 				safeCopy := *videoList[0]
-				cachekey := fmt.Sprintf("video:entity:%d", safeCopy.ID)
+				cachekey := f.rediscache.Key("video:entity:%d", safeCopy.ID)
 				if b, err := json.Marshal(safeCopy); err == nil {
 					//异步回写redis
 					go func(k string, b []byte) {
@@ -137,7 +137,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 				mu.Lock()
 				videoMap[id] = &safeCopy
 				mu.Unlock()
-				f.localcache.Set(fmt.Sprintf("video:entity:%d", safeCopy.ID), safeCopy, 5*time.Second)
+				f.localcache.Set(f.rediscache.Key("video:entity:%d", safeCopy.ID), safeCopy, 5*time.Second)
 			}
 		}(id)
 	}
@@ -148,7 +148,7 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 // 查询最新视频 (冷热分离 + 游标分页)
 func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
 	// 获取 ZSET 中最老的一条数据
-	zsetTail, err := f.rediscache.ZRangeWithScores(ctx, "feed:global_timeline", 0, 0)
+	zsetTail, err := f.rediscache.ZRangeWithScores(ctx, f.rediscache.Key("feed:global_timeline"), 0, 0)
 
 	if err != nil {
 		return ListLatestResponse{}, err
@@ -158,7 +158,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 
 	if isZsetEmpty {
 		//全局静态锁：无视所有用户的不同时间戳游标
-		sfKey := "sf:fallback:global_timeline_rebuild"
+		sfKey := f.rediscache.Key("sf:fallback:global_timeline_rebuild")
 
 		v, err, _ := f.requestGroup.Do(sfKey, func() (interface{}, error) {
 			// 无视游标，直接去 MySQL 捞最新的 1000 条
@@ -180,7 +180,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 					Member: fmt.Sprintf("%d", vid.ID),
 				})
 			}
-			f.rediscache.ZAdd(bgCtx, "feed:global_timeline", zElements...)
+			f.rediscache.ZAdd(bgCtx, f.rediscache.Key("feed:global_timeline"), zElements...)
 			return "SUCCESS", nil
 		})
 
@@ -207,7 +207,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 		//冷数据降级查库
 
 		// 针对个别用户的防并发（此时可以用时间戳做锁，因为冷尾流量极小）
-		sfKey := fmt.Sprintf("sf:cold:listLatest:%d:%d", limit, reqTime)
+		sfKey := f.rediscache.Key("sf:cold:listLatest:%d:%d", limit, reqTime)
 		v, err, _ := f.requestGroup.Do(sfKey, func() (interface{}, error) {
 			return f.repo.ListLatest(ctx, limit, latestBefore)
 		})
@@ -224,7 +224,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 			maxScore = fmt.Sprintf("%d", reqTime-1) // 防重复
 		}
 
-		videoIDsStr, err := f.rediscache.ZRevRangeByScore(ctx, "feed:global_timeline", maxScore, "-inf", 0, int64(limit))
+		videoIDsStr, err := f.rediscache.ZRevRangeByScore(ctx, f.rediscache.Key("feed:global_timeline"), maxScore, "-inf", 0, int64(limit))
 		if err != nil {
 			return ListLatestResponse{}, err
 		}
@@ -254,7 +254,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 				coldCursor = latestBefore
 			}
 
-			sfKey := fmt.Sprintf("sf:stitch:listLatest:%d:%d", remainLimit, coldCursor.UnixMilli())
+			sfKey := f.rediscache.Key("sf:stitch:listLatest:%d:%d", remainLimit, coldCursor.UnixMilli())
 			v, err, _ := f.requestGroup.Do(sfKey, func() (interface{}, error) {
 				return f.repo.ListLatest(ctx, remainLimit, coldCursor)
 			})
@@ -343,7 +343,7 @@ func (f *FeedService) ListByFollowing(ctx context.Context, limit int, latestBefo
 		if !latestBefore.IsZero() {
 			before = latestBefore.Unix()
 		}
-		cacheKey = fmt.Sprintf("feed:listByFollowing:limit=%d:accountID=%d:before=%d", limit, viewerAccountID, before)
+		cacheKey = f.rediscache.Key("feed:listByFollowing:limit=%d:accountID=%d:before=%d", limit, viewerAccountID, before)
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
 
@@ -413,10 +413,10 @@ func (f *FeedService) ListByPopularity(ctx context.Context, limit int, reqAsOf i
 		const win = 60
 		keys := make([]string, 0, win)
 		for i := 0; i < win; i++ {
-			keys = append(keys, "hot:video:1m:"+asOf.Add(-time.Duration(i)*time.Minute).Format("200601021504"))
+			keys = append(keys, f.rediscache.Key("hot:video:1m:%s", asOf.Add(-time.Duration(i)*time.Minute).Format("200601021504")))
 		}
 
-		dest := "hot:video:merge:1m:" + asOf.Format("200601021504") // 快照key：同一个as_of页内复用
+		dest := f.rediscache.Key("hot:video:merge:1m:%s", asOf.Format("200601021504")) // 快照key：同一个as_of页内复用
 		opCtx, cancel := context.WithTimeout(ctx, 80*time.Millisecond)
 		defer cancel()
 
@@ -544,4 +544,12 @@ func buildOrderedResult(orderedIDs []uint, dataMap map[uint]*video.Video) []*vid
 		}
 	}
 	return res
+}
+
+func (f *FeedService) ListByTag(ctx context.Context, tagName string, limit int, viewerAccountID uint) ([]FeedVideoItem, error) {
+	videos, err := f.repo.ListByTag(ctx, tagName, limit)
+	if err != nil {
+		return nil, err
+	}
+	return f.buildFeedVideos(ctx, videos, viewerAccountID)
 }

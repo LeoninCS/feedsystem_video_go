@@ -3,7 +3,6 @@ package jwt
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -69,7 +68,7 @@ func SoftJWTAuth(accountRepo *account.AccountRepository, cache *rediscache.Clien
 }
 
 func check(c *gin.Context, claims *auth.Claims, tokenString string, accountRepo *account.AccountRepository, cache *rediscache.Client) {
-	key := fmt.Sprintf("account:%d", claims.AccountID)
+	key := cache.Key("account:%d", claims.AccountID)
 
 	// 先查 Redis
 	if cache != nil {

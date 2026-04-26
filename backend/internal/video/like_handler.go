@@ -2,6 +2,7 @@ package video
 
 import (
 	"feedsystem_video_go/internal/middleware/jwt"
+	"feedsystem_video_go/internal/apierror"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,7 +18,7 @@ func NewLikeHandler(service *LikeService) *LikeHandler {
 func (lh *LikeHandler) Like(c *gin.Context) {
 	var req LikeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VideoID <= 0 {
@@ -27,7 +28,7 @@ func (lh *LikeHandler) Like(c *gin.Context) {
 
 	accountID, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -45,7 +46,7 @@ func (lh *LikeHandler) Like(c *gin.Context) {
 func (lh *LikeHandler) Unlike(c *gin.Context) {
 	var req LikeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VideoID <= 0 {
@@ -55,7 +56,7 @@ func (lh *LikeHandler) Unlike(c *gin.Context) {
 
 	accountID, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -73,7 +74,7 @@ func (lh *LikeHandler) Unlike(c *gin.Context) {
 func (lh *LikeHandler) IsLiked(c *gin.Context) {
 	var req LikeRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if req.VideoID <= 0 {
@@ -83,7 +84,7 @@ func (lh *LikeHandler) IsLiked(c *gin.Context) {
 
 	accountID, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	isLiked, err := lh.service.IsLiked(c.Request.Context(), req.VideoID, accountID)
@@ -97,7 +98,7 @@ func (lh *LikeHandler) IsLiked(c *gin.Context) {
 func (lh *LikeHandler) ListMyLikedVideos(c *gin.Context) {
 	accountID, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 

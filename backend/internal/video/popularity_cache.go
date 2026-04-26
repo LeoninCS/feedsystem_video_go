@@ -2,7 +2,6 @@ package video
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -15,10 +14,10 @@ func UpdatePopularityCache(ctx context.Context, cache *rediscache.Client, id uin
 		return
 	}
 
-	_ = cache.Del(context.Background(), fmt.Sprintf("video:detail:id=%d", id))
+	_ = cache.Del(context.Background(), cache.Key("video:detail:id=%d", id))
 
 	now := time.Now().UTC().Truncate(time.Minute)
-	windowKey := "hot:video:1m:" + now.Format("200601021504")
+	windowKey := cache.Key("hot:video:1m:%s", now.Format("200601021504"))
 	member := strconv.FormatUint(uint64(id), 10)
 
 	opCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)

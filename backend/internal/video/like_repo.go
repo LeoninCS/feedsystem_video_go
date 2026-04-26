@@ -93,6 +93,7 @@ func (r *LikeRepository) ListLikedVideos(ctx context.Context, accountID uint) ([
 		Joins("JOIN likes ON likes.video_id = videos.id").
 		Where("likes.account_id = ?", accountID).
 		Order("likes.created_at desc").
+		Limit(200).
 		Find(&videos).Error
 	if err != nil {
 		return nil, err

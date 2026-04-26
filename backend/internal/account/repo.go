@@ -71,16 +71,36 @@ func (ar *AccountRepository) FindByUsername(ctx context.Context, username string
 	return &account, nil
 }
 
-func (ar *AccountRepository) Login(ctx context.Context, id uint, token string) error {
-	if err := ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Update("token", token).Error; err != nil {
+func (ar *AccountRepository) Login(ctx context.Context, id uint, token, refreshToken string) error {
+	if err := ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Updates(map[string]interface{}{"token": token, "refresh_token": refreshToken}).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
 func (ar *AccountRepository) Logout(ctx context.Context, id uint) error {
-	if err := ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Update("token", "").Error; err != nil {
+	if err := ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Updates(map[string]interface{}{"token": "", "refresh_token": ""}).Error; err != nil {
 		return err
 	}
 	return nil
+}
+
+func (ar *AccountRepository) UpdateAvatar(ctx context.Context, accountID uint, avatarURL string) error {
+	return ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", accountID).Update("avatar_url", avatarURL).Error
+}
+
+func (ar *AccountRepository) UpdateToken(ctx context.Context, id uint, token string) error {
+	return ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Update("token", token).Error
+}
+
+func (ar *AccountRepository) UpdateFields(ctx context.Context, id uint, updates map[string]interface{}) error {
+	return ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (ar *AccountRepository) FindAll(ctx context.Context) ([]*Account, error) {
+	var accounts []*Account
+	if err := ar.db.WithContext(ctx).Find(&accounts).Error; err != nil {
+		return nil, err
+	}
+	return accounts, nil
 }

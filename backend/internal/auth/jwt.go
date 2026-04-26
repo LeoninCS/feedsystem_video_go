@@ -2,7 +2,10 @@
 package auth
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
+	"log"
 	"os"
 	"time"
 
@@ -12,7 +15,13 @@ import (
 func jwtSecret() []byte {
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
-		secret = "change-me-in-env"
+		b := make([]byte, 32)
+		if _, err := rand.Read(b); err != nil {
+			log.Printf("FATAL: cannot generate JWT secret: %v", err)
+			return []byte("fallback-unsafe-key-change-me")
+		}
+		secret = hex.EncodeToString(b)
+		log.Printf("WARNING: JWT_SECRET not set, generated random key. All tokens invalid on restart.")
 	}
 	return []byte(secret)
 }
@@ -30,7 +39,7 @@ func GenerateToken(accountID uint, username string) (string, error) {
 		AccountID: accountID,
 		Username:  username,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(now.Add(24 * time.Hour)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
 		},
@@ -39,6 +48,14 @@ func GenerateToken(accountID uint, username string) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString(jwtSecret())
+}
+
+func GenerateRefreshToken(accountID uint) (string, error) {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func ParseToken(tokenString string) (*Claims, error) {

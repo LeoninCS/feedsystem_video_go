@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"feedsystem_video_go/internal/account"
+	"feedsystem_video_go/internal/apierror"
 	"feedsystem_video_go/internal/middleware/jwt"
 
 	"github.com/gin-gonic/gin"
@@ -29,18 +30,18 @@ func NewVideoHandler(service *VideoService, accountService *account.AccountServi
 func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 	var req PublishVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
 	authorId, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	username, err := jwt.GetUsername(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	video := &Video{
@@ -53,7 +54,7 @@ func (vh *VideoHandler) PublishVideo(c *gin.Context) {
 		CreateTime:  time.Now(),
 	}
 	if err := vh.service.Publish(c.Request.Context(), video); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, video)
@@ -93,7 +94,12 @@ func (vh *VideoHandler) UploadVideo(c *gin.Context) {
 		return
 	}
 
-	filename := randHex(16) + ext
+	filename, err := randHex(16)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate filename"})
+		return
+	}
+	filename = filename + ext
 	absPath := filepath.Join(absDir, filename)
 
 	if err := c.SaveUploadedFile(f, absPath); err != nil {
@@ -145,7 +151,12 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 		return
 	}
 
-	filename := randHex(16) + ext
+	filename, err := randHex(16)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate filename"})
+		return
+	}
+	filename = filename + ext
 	absPath := filepath.Join(absDir, filename)
 
 	if err := c.SaveUploadedFile(f, absPath); err != nil {
@@ -161,10 +172,12 @@ func (vh *VideoHandler) UploadCover(c *gin.Context) {
 	})
 }
 
-func randHex(n int) string {
+func randHex(n int) (string, error) {
 	b := make([]byte, n)
-	_, _ = rand.Read(b)
-	return hex.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", fmt.Errorf("rand.Read: %w", err)
+	}
+	return hex.EncodeToString(b), nil
 }
 
 func buildAbsoluteURL(c *gin.Context, p string) string {
@@ -181,16 +194,16 @@ func buildAbsoluteURL(c *gin.Context, p string) string {
 func (vh *VideoHandler) DeleteVideo(c *gin.Context) {
 	var req DeleteVideoRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	authorId, err := jwt.GetAccountID(c)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := vh.service.Delete(c.Request.Context(), req.ID, authorId); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"message": "video deleted"})
@@ -199,12 +212,12 @@ func (vh *VideoHandler) DeleteVideo(c *gin.Context) {
 func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 	var req ListByAuthorIDRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	videos, err := vh.service.ListByAuthorID(c.Request.Context(), req.AuthorID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if videos == nil {
@@ -216,12 +229,12 @@ func (vh *VideoHandler) ListByAuthorID(c *gin.Context) {
 func (vh *VideoHandler) GetDetail(c *gin.Context) {
 	var req GetDetailRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	video, err := vh.service.GetDetail(c.Request.Context(), req.ID)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, video)
@@ -230,11 +243,11 @@ func (vh *VideoHandler) GetDetail(c *gin.Context) {
 func (vh *VideoHandler) UpdateLikesCount(c *gin.Context) {
 	var req UpdateLikesCountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := vh.service.UpdateLikesCount(c.Request.Context(), req.ID, req.LikesCount); err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(apierror.ClassifyHTTPStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"message": "likes count updated"})

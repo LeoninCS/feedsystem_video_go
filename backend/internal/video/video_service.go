@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
+	"feedsystem_video_go/internal/apierror"
 
 	"gorm.io/gorm"
 )
@@ -60,8 +60,14 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 		if err := tx.Create(&msg).Error; err != nil {
 			return err
 		}
-		return nil
 
+		tags := ExtractTags(video.Title + " " + video.Description)
+		for _, tagName := range tags {
+			var tag Tag
+			tx.Where("name = ?", tagName).FirstOrCreate(&tag, Tag{Name: tagName})
+			tx.Create(&VideoTag{VideoID: video.ID, TagID: tag.ID})
+		}
+		return nil
 	})
 	return err
 
@@ -76,13 +82,13 @@ func (vs *VideoService) Delete(ctx context.Context, id uint, authorID uint) erro
 		return errors.New("video not found")
 	}
 	if video.AuthorID != authorID {
-		return errors.New("unauthorized")
+		return apierror.ErrUnauthorized
 	}
 	if err := vs.repo.DeleteVideo(ctx, id); err != nil {
 		return err
 	}
 	if vs.cache != nil {
-		cacheKey := fmt.Sprintf("video:detail:id=%d", id)
+		cacheKey := vs.cache.Key("video:detail:id=%d", id)
 		_ = vs.cache.Del(context.Background(), cacheKey)
 	}
 	return nil
@@ -97,7 +103,7 @@ func (vs *VideoService) ListByAuthorID(ctx context.Context, authorID uint) ([]Vi
 }
 
 func (vs *VideoService) GetDetail(ctx context.Context, id uint) (*Video, error) {
-	cacheKey := fmt.Sprintf("video:detail:id=%d", id)
+	cacheKey := vs.cache.Key("video:detail:id=%d", id)
 
 	getCached := func() (*Video, bool) {
 		opCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
@@ -203,11 +209,11 @@ func (vs *VideoService) UpdatePopularity(ctx context.Context, id uint, change in
 
 	if vs.cache != nil {
 		// 1) 详情缓存：直接失效（最简单靠谱）
-		_ = vs.cache.Del(context.Background(), fmt.Sprintf("video:detail:id=%d", id))
+		_ = vs.cache.Del(context.Background(), vs.cache.Key("video:detail:id=%d", id))
 
 		// 2) 热榜：写到“时间窗ZSET”，不要用 detail key
 		now := time.Now().UTC().Truncate(time.Minute)
-		windowKey := "hot:video:1m:" + now.Format("200601021504")
+		windowKey := vs.cache.Key("hot:video:1m:%s", now.Format("200601021504"))
 		member := strconv.FormatUint(uint64(id), 10)
 
 		opCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)

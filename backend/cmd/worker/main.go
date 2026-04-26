@@ -9,6 +9,7 @@ import (
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
 	"feedsystem_video_go/internal/worker"
+	mqrabbit "feedsystem_video_go/internal/middleware/rabbitmq"
 	"log"
 	"os"
 	"os/signal"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+	"gorm.io/gorm"
 )
 
 const (
@@ -37,6 +39,21 @@ const (
 	popularityBindingKey = "video.popularity.*"
 )
 
+func connectWithRetry(name string, maxRetries int, fn func() error) {
+	for i := 0; i < maxRetries; i++ {
+		if err := fn(); err == nil {
+			return
+		}
+		wait := time.Duration(1<<i) * time.Second
+		if wait > 30*time.Second {
+			wait = 30 * time.Second
+		}
+		log.Printf("%s 不可用，%v 后重试 (%d/%d)...", name, wait, i+1, maxRetries)
+		time.Sleep(wait)
+	}
+	log.Fatalf("%s: 超过最大重试次数", name)
+}
+
 func main() {
 	// 加载配置
 	configPath := os.Getenv("CONFIG_PATH")
@@ -53,11 +70,13 @@ func main() {
 	} else {
 		log.Printf("Config loaded from file: %s", configPath)
 	}
-	// 连接数据库
-	sqlDB, err := db.NewDB(cfg.Database)
-	if err != nil {
-		log.Fatalf("Failed to connect database: %v", err)
-	}
+	// 连接数据库（带重试）
+	var sqlDB *gorm.DB
+	connectWithRetry("MySQL", 10, func() error {
+		var err error
+		sqlDB, err = db.NewDB(cfg.Database)
+		return err
+	})
 	defer db.CloseDB(sqlDB)
 
 	// 连接 Redis（用于流行度更新）
@@ -77,12 +96,14 @@ func main() {
 			log.Printf("Redis connected (popularity worker enabled)")
 		}
 	}
-	// 连接 RabbitMQ
+	// 连接 RabbitMQ（带重试）
 	url := "amqp://" + cfg.RabbitMQ.Username + ":" + cfg.RabbitMQ.Password + "@" + cfg.RabbitMQ.Host + ":" + strconv.Itoa(cfg.RabbitMQ.Port) + "/"
-	conn, err := amqp.Dial(url)
-	if err != nil {
-		log.Fatalf("Failed to connect rabbitmq: %v", err)
-	}
+	var conn *amqp.Connection
+	connectWithRetry("RabbitMQ", 10, func() error {
+		var err error
+		conn, err = amqp.Dial(url)
+		return err
+	})
 	defer conn.Close()
 	// 创建 RabbitMQ 通道
 	ch, err := conn.Channel()
@@ -174,7 +195,7 @@ func declareSocialTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -211,7 +232,7 @@ func declarePopularityTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -245,7 +266,7 @@ func declareLikeTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err
@@ -279,7 +300,7 @@ func declareCommentTopology(ch *amqp.Channel) error {
 		false,
 		false,
 		false,
-		nil,
+		amqp.Table{"x-dead-letter-exchange": mqrabbit.DLXExchange},
 	)
 	if err != nil {
 		return err

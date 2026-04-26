@@ -5,8 +5,8 @@ services:
     image: mysql:8.0
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: "123456"
-      MYSQL_DATABASE: "feedsystem"
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-feedsystem}
       TZ: "Asia/Shanghai"
     ports:
       - "3307:3306"
@@ -25,7 +25,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    command: ["redis-server", "--appendonly", "yes", "--requirepass", "123456"]
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD:-123456}"]
     ports:
       - "6379:6379"
     volumes:
@@ -43,8 +43,8 @@ services:
       - "5672:5672"
       - "15672:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: password123
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-password123}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
@@ -59,6 +59,8 @@ services:
       dockerfile: backend/Dockerfile
       target: api
     restart: always
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
     ports:
       - "8080:8080"
     volumes:
@@ -71,6 +73,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep api || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
   worker:
     build:
@@ -78,6 +85,8 @@ services:
       dockerfile: backend/Dockerfile
       target: worker
     restart: always
+    environment:
+      JWT_SECRET: ${JWT_SECRET:-feedsystem-dev-secret-key}
     volumes:
       - ./backend/configs/config.docker.yaml:/app/configs/config.yaml:ro
     depends_on:
@@ -87,6 +96,11 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep worker || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
 
   frontend:
     build:
@@ -97,6 +111,11 @@ services:
       - "5173:80"
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/ || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
 
 volumes:
   mysql_data:

@@ -80,6 +80,14 @@ func (s *SocialService) GetAllVloggers(ctx context.Context, FollowerID uint) ([]
 	return s.repo.GetAllVloggers(ctx, FollowerID)
 }
 
+func (s *SocialService) CountFollowers(ctx context.Context, vloggerID uint) (int64, error) {
+	return s.repo.CountFollowers(ctx, vloggerID)
+}
+
+func (s *SocialService) CountVloggers(ctx context.Context, followerID uint) (int64, error) {
+	return s.repo.CountVloggers(ctx, followerID)
+}
+
 func (s *SocialService) IsFollowed(ctx context.Context, social *Social) (bool, error) {
 	_, err := s.accountrepo.FindByID(ctx, social.FollowerID)
 	if err != nil {

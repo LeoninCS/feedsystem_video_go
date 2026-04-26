@@ -101,3 +101,15 @@ func (repo *FeedRepository) GetByIDs(ctx context.Context, ids []uint) ([]*video.
 	}
 	return videos, nil
 }
+
+func (repo *FeedRepository) ListByTag(ctx context.Context, tagName string, limit int) ([]*video.Video, error) {
+	var videos []*video.Video
+	err := repo.db.WithContext(ctx).Model(&video.Video{}).Table("videos").
+		Joins("JOIN video_tags ON video_tags.video_id = videos.id").
+		Joins("JOIN tags ON tags.id = video_tags.tag_id").
+		Where("tags.name = ?", tagName).
+		Order("videos.create_time desc").
+		Limit(limit).
+		Find(&videos).Error
+	return videos, err
+}
