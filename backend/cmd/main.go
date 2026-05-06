@@ -12,9 +12,16 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// 加载 .env（本地开发）
+	if err := godotenv.Load(); err != nil {
+		log.Println(".env not found; continuing")
+	}
+
 	// 加载配置
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
