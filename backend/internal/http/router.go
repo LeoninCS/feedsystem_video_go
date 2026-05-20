@@ -6,16 +6,16 @@ import (
 	"feedsystem_video_go/internal/feed"
 	"feedsystem_video_go/internal/message"
 	"feedsystem_video_go/internal/middleware/jwt"
-	"feedsystem_video_go/internal/middleware/ratelimit"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
+	"feedsystem_video_go/internal/middleware/ratelimit"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
 	"feedsystem_video_go/internal/worker"
-	"log"
-	"time"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+	"log"
+	"time"
 )
 
 func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *gin.Engine {
@@ -157,7 +157,7 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 		vloggerCount, _ := socialRepository.CountVloggers(c.Request.Context(), req.AccountID)
 
 		c.JSON(200, account.GetProfileResponse{
-			Account: account.FindByIDResponse{ID: acc.ID, Username: acc.Username, AvatarURL: acc.AvatarURL, Bio: acc.Bio},
+			Account:    account.FindByIDResponse{ID: acc.ID, Username: acc.Username, AvatarURL: acc.AvatarURL, Bio: acc.Bio},
 			VideoCount: videoCount, TotalLikes: totalLikes,
 			FollowerCount: followerCount, VloggerCount: vloggerCount,
 		})

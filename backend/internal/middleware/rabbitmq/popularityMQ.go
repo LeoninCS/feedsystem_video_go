@@ -54,4 +54,3 @@ func (p *PopularityMQ) Update(ctx context.Context, videoID uint, change int64) e
 	}
 	return p.PublishJSON(ctx, popularityExchange, popularityUpdateRK, event)
 }
-

@@ -3,9 +3,9 @@ package video
 import (
 	"context"
 	"errors"
+	"feedsystem_video_go/internal/apierror"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
-	"feedsystem_video_go/internal/apierror"
 	"regexp"
 	"strings"
 

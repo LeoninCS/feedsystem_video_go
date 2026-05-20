@@ -68,4 +68,3 @@ func (c *CommentMQ) publish(ctx context.Context, action, routingKey string, evt 
 	evt.OccurredAt = time.Now().UTC()
 	return c.PublishJSON(ctx, commentExchange, routingKey, evt)
 }
-

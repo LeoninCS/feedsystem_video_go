@@ -6,16 +6,16 @@ import (
 	"errors"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	"feedsystem_video_go/internal/video"
-	"log"
 	amqp "github.com/rabbitmq/amqp091-go"
+	"log"
 	"time"
 )
 
 type LikeWorker struct {
-	ch    *amqp.Channel
+	ch     *amqp.Channel
 	likes  *video.LikeRepository
 	videos *video.VideoRepository
-	queue string
+	queue  string
 }
 
 func NewLikeWorker(ch *amqp.Channel, likes *video.LikeRepository, videos *video.VideoRepository, queue string) *LikeWorker {

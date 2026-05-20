@@ -13,21 +13,21 @@ import (
 )
 
 type Notification struct {
-	ID        uint      `gorm:"primaryKey" json:"id"`
-	RecipientID uint    `gorm:"index;not null" json:"recipient_id"`
-	SenderID  uint      `gorm:"not null" json:"sender_id"`
-	Type      string    `gorm:"type:varchar(50);not null" json:"type"`
-	TargetID  uint      `json:"target_id"`
-	Content   string    `gorm:"type:varchar(255)" json:"content"`
-	IsRead    bool      `gorm:"default:false" json:"is_read"`
-	CreatedAt time.Time `gorm:"autoCreateTime" json:"created_at"`
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	RecipientID uint      `gorm:"index;not null" json:"recipient_id"`
+	SenderID    uint      `gorm:"not null" json:"sender_id"`
+	Type        string    `gorm:"type:varchar(50);not null" json:"type"`
+	TargetID    uint      `json:"target_id"`
+	Content     string    `gorm:"type:varchar(255)" json:"content"`
+	IsRead      bool      `gorm:"default:false" json:"is_read"`
+	CreatedAt   time.Time `gorm:"autoCreateTime" json:"created_at"`
 }
 
 type NotificationWorker struct {
-	ch      *amqp.Channel
-	db      *gorm.DB
-	queue   string
-	hub     NotificationHub
+	ch    *amqp.Channel
+	db    *gorm.DB
+	queue string
+	hub   NotificationHub
 }
 
 type NotificationHub interface {
@@ -96,7 +96,10 @@ func (w *NotificationWorker) process(ctx context.Context, d amqp.Delivery) error
 			return nil
 		}
 		var authorID uint
-		w.db.WithContext(ctx).Model(&struct{ ID uint; AuthorID uint }{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
+		w.db.WithContext(ctx).Model(&struct {
+			ID       uint
+			AuthorID uint
+		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
 		if authorID == 0 || authorID == evt.UserID {
 			return nil
 		}
@@ -111,7 +114,10 @@ func (w *NotificationWorker) process(ctx context.Context, d amqp.Delivery) error
 			return nil
 		}
 		var authorID uint
-		w.db.WithContext(ctx).Model(&struct{ ID uint; AuthorID uint }{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
+		w.db.WithContext(ctx).Model(&struct {
+			ID       uint
+			AuthorID uint
+		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
 		if authorID == 0 || authorID == evt.AuthorID {
 			return nil
 		}

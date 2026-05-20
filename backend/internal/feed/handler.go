@@ -1,8 +1,8 @@
 package feed
 
 import (
-	"feedsystem_video_go/internal/middleware/jwt"
 	"feedsystem_video_go/internal/apierror"
+	"feedsystem_video_go/internal/middleware/jwt"
 	"time"
 
 	"github.com/gin-gonic/gin"

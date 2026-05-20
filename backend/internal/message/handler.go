@@ -19,8 +19,8 @@ type Service struct{ repo *Repository }
 type Handler struct{ service *Service }
 
 func NewRepository(db *gorm.DB) *Repository { return &Repository{db: db} }
-func NewService(repo *Repository) *Service   { return &Service{repo: repo} }
-func NewHandler(service *Service) *Handler   { return &Handler{service: service} }
+func NewService(repo *Repository) *Service  { return &Service{repo: repo} }
+func NewHandler(service *Service) *Handler  { return &Handler{service: service} }
 
 func (r *Repository) AutoMigrate(ctx context.Context) error {
 	return r.db.WithContext(ctx).AutoMigrate(&Message{})

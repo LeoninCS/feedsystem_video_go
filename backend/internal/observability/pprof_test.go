@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 )
+
 func TestNewPprofMux(t *testing.T) {
 	t.Parallel()
 
@@ -31,7 +32,7 @@ func TestNewPprofServerWithDisabled(t *testing.T) {
 
 func TestPprofServerCloseWithDisabledServer(t *testing.T) {
 	t.Parallel()
-	
+
 	pprofServer, err := NewPprofServer("api", false, "localhost:6060")
 	if err != nil {
 		t.Fatalf("Failed to create pprof server: %v", err)

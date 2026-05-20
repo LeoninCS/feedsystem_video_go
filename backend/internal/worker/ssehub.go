@@ -14,9 +14,9 @@ import (
 )
 
 type SSEHub struct {
-	mu       sync.RWMutex
-	clients  map[uint][]chan *Notification
-	db       *gorm.DB
+	mu      sync.RWMutex
+	clients map[uint][]chan *Notification
+	db      *gorm.DB
 }
 
 func NewSSEHub(db *gorm.DB) *SSEHub {

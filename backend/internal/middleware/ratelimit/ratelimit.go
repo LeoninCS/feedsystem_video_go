@@ -1,14 +1,14 @@
 package ratelimit
 
 import (
-	rediscache "feedsystem_video_go/internal/middleware/redis"
 	jwt "feedsystem_video_go/internal/middleware/jwt"
+	rediscache "feedsystem_video_go/internal/middleware/redis"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
-	"github.com/gin-gonic/gin"
 )
 
 type KeyFunc func(*gin.Context) (string, bool)
