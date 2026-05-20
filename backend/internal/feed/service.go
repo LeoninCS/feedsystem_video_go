@@ -147,11 +147,15 @@ func (f *FeedService) GetVideoByIDs(ctx context.Context, videoIDs []uint) ([]*vi
 
 // 查询最新视频 (冷热分离 + 游标分页)
 func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
+	if f.rediscache == nil {
+		return f.listLatestFromDB(ctx, limit, latestBefore, viewerAccountID)
+	}
+
 	// 获取 ZSET 中最老的一条数据
 	zsetTail, err := f.rediscache.ZRangeWithScores(ctx, f.rediscache.Key("feed:global_timeline"), 0, 0)
 
 	if err != nil {
-		return ListLatestResponse{}, err
+		return f.listLatestFromDB(ctx, limit, latestBefore, viewerAccountID)
 	}
 
 	isZsetEmpty := len(zsetTail) == 0
@@ -271,9 +275,7 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 		// 将本页最后一条视频的时间作为下一次请求的游标
 		nextTime = baseVideos[len(baseVideos)-1].CreateTime.UnixMilli()
 	}
-	var hasMore bool
-
-	hasMore = len(baseVideos) == limit
+	hasMore := len(baseVideos) == limit
 
 	feedVideos, err := f.buildFeedVideos(ctx, baseVideos, viewerAccountID)
 	if err != nil {
@@ -284,6 +286,26 @@ func (f *FeedService) ListLatest(ctx context.Context, limit int, latestBefore ti
 		VideoList: feedVideos,
 		NextTime:  nextTime,
 		HasMore:   hasMore,
+	}, nil
+}
+
+func (f *FeedService) listLatestFromDB(ctx context.Context, limit int, latestBefore time.Time, viewerAccountID uint) (ListLatestResponse, error) {
+	videos, err := f.repo.ListLatest(ctx, limit, latestBefore)
+	if err != nil {
+		return ListLatestResponse{}, err
+	}
+	feedVideos, err := f.buildFeedVideos(ctx, videos, viewerAccountID)
+	if err != nil {
+		return ListLatestResponse{}, err
+	}
+	var nextTime int64
+	if len(videos) > 0 {
+		nextTime = videos[len(videos)-1].CreateTime.UnixMilli()
+	}
+	return ListLatestResponse{
+		VideoList: feedVideos,
+		NextTime:  nextTime,
+		HasMore:   len(videos) == limit,
 	}, nil
 }
 

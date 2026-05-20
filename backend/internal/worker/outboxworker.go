@@ -35,7 +35,9 @@ func StartOutboxPoller(db *gorm.DB, tmq *rabbitmq.TimelineMQ) {
 				err := tmq.PublishVideo(context.Background(), msg.VideoID, msg.CreateTime)
 
 				if err == nil {
-					db.Delete(&msg)
+					if err := db.Delete(&msg).Error; err != nil {
+						log.Printf("删除 outbox 消息失败: id=%d, err=%v", msg.ID, err)
+					}
 				} else {
 					log.Printf("投递MQ失败: VideoID: %d, err: %v", msg.VideoID, err)
 				}

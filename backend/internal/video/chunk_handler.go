@@ -3,6 +3,7 @@ package video
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 )
 
 const sessionTTL = 24 * time.Hour
+
+var errChunkCacheUnavailable = errors.New("chunk upload requires redis")
 
 type ChunkUploadHandler struct {
 	cache *rediscache.Client
@@ -35,6 +38,9 @@ func (h *ChunkUploadHandler) hashKey(accountID uint, fileHash string) string {
 }
 
 func (h *ChunkUploadHandler) getSession(ctx *gin.Context, uploadID string) (*ChunkUploadSession, error) {
+	if h.cache == nil {
+		return nil, errChunkCacheUnavailable
+	}
 	b, err := h.cache.GetBytes(ctx.Request.Context(), h.sessionKey(uploadID))
 	if err != nil {
 		return nil, fmt.Errorf("upload session not found")
@@ -47,6 +53,9 @@ func (h *ChunkUploadHandler) getSession(ctx *gin.Context, uploadID string) (*Chu
 }
 
 func (h *ChunkUploadHandler) saveSession(ctx *gin.Context, s *ChunkUploadSession) error {
+	if h.cache == nil {
+		return errChunkCacheUnavailable
+	}
 	b, err := json.Marshal(s)
 	if err != nil {
 		return err
@@ -55,6 +64,11 @@ func (h *ChunkUploadHandler) saveSession(ctx *gin.Context, s *ChunkUploadSession
 }
 
 func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
+	if h.cache == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": errChunkCacheUnavailable.Error()})
+		return
+	}
+
 	var req InitChunkUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -120,6 +134,11 @@ func (h *ChunkUploadHandler) InitChunkUpload(c *gin.Context) {
 }
 
 func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
+	if h.cache == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": errChunkCacheUnavailable.Error()})
+		return
+	}
+
 	var req UploadChunkRequest
 	if err := c.ShouldBind(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -211,6 +230,11 @@ func (h *ChunkUploadHandler) UploadChunk(c *gin.Context) {
 }
 
 func (h *ChunkUploadHandler) ChunkStatus(c *gin.Context) {
+	if h.cache == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": errChunkCacheUnavailable.Error()})
+		return
+	}
+
 	var req ChunkStatusRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -241,6 +265,11 @@ func (h *ChunkUploadHandler) ChunkStatus(c *gin.Context) {
 }
 
 func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
+	if h.cache == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": errChunkCacheUnavailable.Error()})
+		return
+	}
+
 	var req CompleteChunkUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -328,11 +357,11 @@ func (h *ChunkUploadHandler) CompleteChunkUpload(c *gin.Context) {
 	finalFile.Close()
 
 	// Clean up temp chunks
-	os.RemoveAll(tmpDir)
+	_ = os.RemoveAll(tmpDir)
 
 	// Clean up Redis session
-	h.cache.Del(c.Request.Context(), h.sessionKey(req.UploadID))
-	h.cache.Del(c.Request.Context(), h.hashKey(accountID, session.FileHash))
+	_ = h.cache.Del(c.Request.Context(), h.sessionKey(req.UploadID))
+	_ = h.cache.Del(c.Request.Context(), h.hashKey(accountID, session.FileHash))
 
 	urlPath := fmt.Sprintf("/static/videos/%d/%s/%s.mp4", accountID, date, filename)
 	playURL := buildAbsoluteURL(c, urlPath)

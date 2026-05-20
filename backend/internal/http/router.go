@@ -12,10 +12,11 @@ import (
 	"feedsystem_video_go/internal/social"
 	"feedsystem_video_go/internal/video"
 	"feedsystem_video_go/internal/worker"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"log"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *gin.Engine {
@@ -23,6 +24,9 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 	if err := r.SetTrustedProxies(nil); err != nil {
 		log.Printf("SetTrustedProxies failed: %v", err)
 	}
+	r.GET("/healthz", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok"})
+	})
 	r.Static("/static", "./.run/uploads")
 	// rate_limit
 	loginLimiter := ratelimit.Limit(cache, "account_login", 10, time.Minute, ratelimit.KeyByIP)
@@ -201,9 +205,15 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 
 	// SSE notification
 	if rmq != nil && rmq.Ch != nil {
-		rmq.DeclareTopic("like.events", "notification.like", "like.like")
-		rmq.DeclareTopic("comment.events", "notification.comment", "comment.publish")
-		rmq.DeclareTopic("social.events", "notification.social", "social.follow")
+		if err := rmq.DeclareTopic("like.events", "notification.like", "like.like"); err != nil {
+			log.Printf("notification like topic init failed: %v", err)
+		}
+		if err := rmq.DeclareTopic("comment.events", "notification.comment", "comment.publish"); err != nil {
+			log.Printf("notification comment topic init failed: %v", err)
+		}
+		if err := rmq.DeclareTopic("social.events", "notification.social", "social.follow"); err != nil {
+			log.Printf("notification social topic init failed: %v", err)
+		}
 	}
 	sseHub := worker.NewSSEHub(db)
 	notifGroup := r.Group("/notification")
@@ -216,19 +226,37 @@ func SetRouter(db *gorm.DB, cache *rediscache.Client, rmq *rabbitmq.RabbitMQ) *g
 			ctx := context.Background()
 			// consume from like queue
 			go func() {
-				w := worker.NewNotificationWorker(rmq.Ch, db, "notification.like", hub)
+				ch, err := rmq.Conn.Channel()
+				if err != nil {
+					log.Printf("notification-like channel: %v", err)
+					return
+				}
+				defer ch.Close()
+				w := worker.NewNotificationWorker(ch, db, "notification.like", hub)
 				if err := w.Run(ctx); err != nil {
 					log.Printf("notification-like worker: %v", err)
 				}
 			}()
 			go func() {
-				w := worker.NewNotificationWorker(rmq.Ch, db, "notification.comment", hub)
+				ch, err := rmq.Conn.Channel()
+				if err != nil {
+					log.Printf("notification-comment channel: %v", err)
+					return
+				}
+				defer ch.Close()
+				w := worker.NewNotificationWorker(ch, db, "notification.comment", hub)
 				if err := w.Run(ctx); err != nil {
 					log.Printf("notification-comment worker: %v", err)
 				}
 			}()
 			go func() {
-				w := worker.NewNotificationWorker(rmq.Ch, db, "notification.social", hub)
+				ch, err := rmq.Conn.Channel()
+				if err != nil {
+					log.Printf("notification-social channel: %v", err)
+					return
+				}
+				defer ch.Close()
+				w := worker.NewNotificationWorker(ch, db, "notification.social", hub)
 				if err := w.Run(ctx); err != nil {
 					log.Printf("notification-social worker: %v", err)
 				}

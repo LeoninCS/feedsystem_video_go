@@ -6,9 +6,10 @@ import (
 	"errors"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	"feedsystem_video_go/internal/video"
-	amqp "github.com/rabbitmq/amqp091-go"
 	"log"
 	"time"
+
+	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 type LikeWorker struct {

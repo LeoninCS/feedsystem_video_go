@@ -2,7 +2,9 @@ package worker
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -25,8 +27,8 @@ func NewSSEHub(db *gorm.DB) *SSEHub {
 
 func (h *SSEHub) Push(userID uint, n *Notification) {
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	chs, ok := h.clients[userID]
-	h.mu.RUnlock()
 	if !ok {
 		return
 	}
@@ -52,11 +54,25 @@ func (h *SSEHub) Unsubscribe(userID uint, ch chan *Notification) {
 	chs := h.clients[userID]
 	for i, c := range chs {
 		if c == ch {
-			h.clients[userID] = append(chs[:i], chs[i+1:]...)
+			chs = append(chs[:i], chs[i+1:]...)
+			if len(chs) == 0 {
+				delete(h.clients, userID)
+			} else {
+				h.clients[userID] = chs
+			}
 			close(c)
 			return
 		}
 	}
+}
+
+func sseAccountID(c *gin.Context) (uint, bool) {
+	accountID, ok := c.Get("accountID")
+	if !ok {
+		return 0, false
+	}
+	userID, ok := accountID.(uint)
+	return userID, ok && userID != 0
 }
 
 func (h *SSEHub) SSERequireAuth() gin.HandlerFunc {
@@ -83,8 +99,11 @@ func (h *SSEHub) SSERequireAuth() gin.HandlerFunc {
 }
 
 func (h *SSEHub) SSEHandler(c *gin.Context) {
-	accountID, _ := c.Get("accountID")
-	userID := accountID.(uint)
+	userID, ok := sseAccountID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid account"})
+		return
+	}
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
@@ -120,8 +139,11 @@ func (h *SSEHub) SSEHandler(c *gin.Context) {
 }
 
 func (h *SSEHub) ListHandler(c *gin.Context) {
-	accountID, _ := c.Get("accountID")
-	userID := accountID.(uint)
+	userID, ok := sseAccountID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid account"})
+		return
+	}
 
 	var notifications []Notification
 	if err := h.db.WithContext(c.Request.Context()).
@@ -139,28 +161,45 @@ func (h *SSEHub) ListHandler(c *gin.Context) {
 }
 
 func (h *SSEHub) MarkReadHandler(c *gin.Context) {
-	accountID, _ := c.Get("accountID")
-	userID := accountID.(uint)
+	userID, ok := sseAccountID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid account"})
+		return
+	}
 
 	var req struct {
 		ID *uint `json:"id"`
 	}
-	c.ShouldBindJSON(&req)
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
+	var err error
 	if req.ID != nil {
-		h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("id = ? AND recipient_id = ?", *req.ID, userID).Update("is_read", true)
+		err = h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("id = ? AND recipient_id = ?", *req.ID, userID).Update("is_read", true).Error
 	} else {
-		h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("recipient_id = ?", userID).Update("is_read", true)
+		err = h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("recipient_id = ?", userID).Update("is_read", true).Error
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	c.JSON(200, gin.H{"message": "ok"})
 }
 
 func (h *SSEHub) UnreadCountHandler(c *gin.Context) {
-	accountID, _ := c.Get("accountID")
-	userID := accountID.(uint)
+	userID, ok := sseAccountID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid account"})
+		return
+	}
 
 	var count int64
-	h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("recipient_id = ? AND is_read = ?", userID, false).Count(&count)
+	if err := h.db.WithContext(c.Request.Context()).Model(&Notification{}).Where("recipient_id = ? AND is_read = ?", userID, false).Count(&count).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
 	c.JSON(200, gin.H{"count": count})
 }
 

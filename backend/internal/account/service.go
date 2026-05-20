@@ -165,7 +165,9 @@ func (as *AccountService) Logout(ctx context.Context, accountID uint) error {
 			log.Printf("failed to del refresh cache: %v", err)
 		}
 		if account.RefreshToken != "" {
-			as.cache.Del(cacheCtx, as.cache.Key("refresh:%s", account.RefreshToken))
+			if err := as.cache.Del(cacheCtx, as.cache.Key("refresh:%s", account.RefreshToken)); err != nil {
+				log.Printf("failed to del refresh lookup: %v", err)
+			}
 		}
 	}
 	return as.accountRepository.Logout(ctx, account.ID)
@@ -211,8 +213,12 @@ func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken s
 					if err != nil {
 						return "", 0, "", err
 					}
-					as.accountRepository.UpdateToken(ctx, account.ID, newToken)
-					as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(newToken), 24*time.Hour)
+					if err := as.accountRepository.UpdateToken(ctx, account.ID, newToken); err != nil {
+						return "", 0, "", err
+					}
+					if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(newToken), 24*time.Hour); err != nil {
+						log.Printf("failed to set cache: %v", err)
+					}
 					return newToken, account.ID, account.Username, nil
 				}
 			}
@@ -228,7 +234,9 @@ func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken s
 			if err != nil {
 				return "", 0, "", err
 			}
-			as.accountRepository.UpdateToken(ctx, acc.ID, newToken)
+			if err := as.accountRepository.UpdateToken(ctx, acc.ID, newToken); err != nil {
+				return "", 0, "", err
+			}
 			return newToken, acc.ID, acc.Username, nil
 		}
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"feedsystem_video_go/internal/config"
 	"fmt"
 	"strconv"
@@ -41,7 +42,7 @@ func (c *Client) Close() error {
 
 func (c *Client) Ping(ctx context.Context) error {
 	if c == nil || c.rdb == nil {
-		return nil
+		return errors.New("redis client not initialized")
 	}
 	return c.rdb.Ping(ctx).Err()
 }

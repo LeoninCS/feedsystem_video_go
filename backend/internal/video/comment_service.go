@@ -6,6 +6,7 @@ import (
 	"feedsystem_video_go/internal/apierror"
 	"feedsystem_video_go/internal/middleware/rabbitmq"
 	rediscache "feedsystem_video_go/internal/middleware/redis"
+	"log"
 	"regexp"
 	"strings"
 
@@ -150,6 +151,8 @@ func (s *CommentService) notifyMentions(ctx context.Context, comment *Comment) {
 			TargetID:    comment.VideoID,
 			Content:     comment.Username + " 在评论中提到了你",
 		}
-		s.repo.db.WithContext(ctx).Table("notifications").Create(&notif)
+		if err := s.repo.db.WithContext(ctx).Table("notifications").Create(&notif).Error; err != nil {
+			log.Printf("create mention notification failed: %v", err)
+		}
 	}
 }

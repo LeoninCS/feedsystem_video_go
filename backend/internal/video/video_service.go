@@ -64,8 +64,12 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 		tags := ExtractTags(video.Title + " " + video.Description)
 		for _, tagName := range tags {
 			var tag Tag
-			tx.Where("name = ?", tagName).FirstOrCreate(&tag, Tag{Name: tagName})
-			tx.Create(&VideoTag{VideoID: video.ID, TagID: tag.ID})
+			if err := tx.Where("name = ?", tagName).FirstOrCreate(&tag, Tag{Name: tagName}).Error; err != nil {
+				return err
+			}
+			if err := tx.Create(&VideoTag{VideoID: video.ID, TagID: tag.ID}).Error; err != nil {
+				return err
+			}
 		}
 		return nil
 	})

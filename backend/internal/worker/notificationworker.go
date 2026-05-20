@@ -42,6 +42,9 @@ func (w *NotificationWorker) Run(ctx context.Context) error {
 	if w == nil || w.ch == nil || w.db == nil {
 		return errors.New("notification worker is not initialized")
 	}
+	if w.queue == "" {
+		return errors.New("queue is required")
+	}
 	if err := w.db.WithContext(ctx).AutoMigrate(&Notification{}); err != nil {
 		return err
 	}
@@ -96,10 +99,12 @@ func (w *NotificationWorker) process(ctx context.Context, d amqp.Delivery) error
 			return nil
 		}
 		var authorID uint
-		w.db.WithContext(ctx).Model(&struct {
+		if err := w.db.WithContext(ctx).Model(&struct {
 			ID       uint
 			AuthorID uint
-		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
+		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID).Error; err != nil {
+			return err
+		}
 		if authorID == 0 || authorID == evt.UserID {
 			return nil
 		}
@@ -114,10 +119,12 @@ func (w *NotificationWorker) process(ctx context.Context, d amqp.Delivery) error
 			return nil
 		}
 		var authorID uint
-		w.db.WithContext(ctx).Model(&struct {
+		if err := w.db.WithContext(ctx).Model(&struct {
 			ID       uint
 			AuthorID uint
-		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID)
+		}{}).Table("videos").Where("id = ?", evt.VideoID).Select("author_id").Scan(&authorID).Error; err != nil {
+			return err
+		}
 		if authorID == 0 || authorID == evt.AuthorID {
 			return nil
 		}

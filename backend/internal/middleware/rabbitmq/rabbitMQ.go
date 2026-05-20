@@ -30,22 +30,28 @@ func NewRabbitMQ(cfg *config.RabbitMQConfig) (*RabbitMQ, error) {
 	}
 	ch, err := conn.Channel()
 	if err != nil {
+		_ = conn.Close()
 		return nil, err
 	}
 	return &RabbitMQ{Conn: conn, Ch: ch}, nil
 }
 
 func (r *RabbitMQ) Close() error {
-	if r == nil || r.Ch == nil || r.Conn == nil {
+	if r == nil {
 		return nil
 	}
-	if err := r.Ch.Close(); err != nil {
-		return err
+	var closeErr error
+	if r.Ch != nil {
+		if err := r.Ch.Close(); err != nil {
+			closeErr = err
+		}
 	}
-	if err := r.Conn.Close(); err != nil {
-		return err
+	if r.Conn != nil {
+		if err := r.Conn.Close(); closeErr == nil && err != nil {
+			closeErr = err
+		}
 	}
-	return nil
+	return closeErr
 }
 
 func (r *RabbitMQ) DeclareTopic(exchange string, queue string, bindingKey string) error {

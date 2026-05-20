@@ -11,11 +11,11 @@ function readStored(key: string): string | null {
 }
 
 function writeStored(key: string, value: string) {
-  localStorage.setItem(key, value)
+  try { localStorage.setItem(key, value) } catch {}
 }
 
 function removeStored(key: string) {
-  localStorage.removeItem(key)
+  try { localStorage.removeItem(key) } catch {}
 }
 
 export const useAuthStore = defineStore('auth', () => {
