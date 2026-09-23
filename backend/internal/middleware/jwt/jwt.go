@@ -68,7 +68,10 @@ func SoftJWTAuth(accountRepo *account.AccountRepository, cache *rediscache.Clien
 }
 
 func check(c *gin.Context, claims *auth.Claims, tokenString string, accountRepo *account.AccountRepository, cache *rediscache.Client) {
-	key := cache.Key("account:%d", claims.AccountID)
+	var key string
+	if cache != nil {
+		key = cache.Key("account:%d", claims.AccountID)
+	}
 
 	// 先查 Redis
 	if cache != nil {
