@@ -3,7 +3,7 @@ package video
 import "time"
 
 type Video struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
+	ID          uint      `gorm:"primaryKey;index:idx_videos_popularity_time_id,priority:3,sort:desc" json:"id"`
 	AuthorID    uint      `gorm:"index;not null" json:"author_id"`
 	Username    string    `gorm:"type:varchar(255);not null" json:"username"`
 	Title       string    `gorm:"type:varchar(255);not null" json:"title"`
