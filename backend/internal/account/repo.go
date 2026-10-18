@@ -97,10 +97,34 @@ func (ar *AccountRepository) UpdateFields(ctx context.Context, id uint, updates 
 	return ar.db.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Updates(updates).Error
 }
 
-func (ar *AccountRepository) FindAll(ctx context.Context) ([]*Account, error) {
-	var accounts []*Account
-	if err := ar.db.WithContext(ctx).Find(&accounts).Error; err != nil {
+// FindByIDAndRefreshToken loads only id and username when both the primary key
+// and the refresh token match, so no sensitive fields leave the database.
+func (ar *AccountRepository) FindByIDAndRefreshToken(ctx context.Context, id uint, refreshToken string) (*Account, error) {
+	if id == 0 || refreshToken == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var account Account
+	if err := ar.db.WithContext(ctx).
+		Select("id", "username").
+		Where("id = ? AND refresh_token = ?", id, refreshToken).
+		First(&account).Error; err != nil {
 		return nil, err
 	}
-	return accounts, nil
+	return &account, nil
+}
+
+// FindByRefreshToken loads only id and username by the indexed refresh_token
+// column, replacing full-table scans on cache misses.
+func (ar *AccountRepository) FindByRefreshToken(ctx context.Context, refreshToken string) (*Account, error) {
+	if refreshToken == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var account Account
+	if err := ar.db.WithContext(ctx).
+		Select("id", "username").
+		Where("refresh_token = ?", refreshToken).
+		First(&account).Error; err != nil {
+		return nil, err
+	}
+	return &account, nil
 }

@@ -1,11 +1,12 @@
 package account
 
 type Account struct {
-	ID           uint   `gorm:"primaryKey" json:"id"`
-	Username     string `gorm:"unique" json:"username"`
-	Password     string `json:"-"`
-	Token        string `json:"-"`
-	RefreshToken string `json:"-"`
+	ID       uint   `gorm:"primaryKey" json:"id"`
+	Username string `gorm:"unique" json:"username"`
+	Password string `json:"-"`
+	Token    string `json:"-"`
+	// RefreshToken 刷新令牌，普通索引，不可唯一索引，登出时置空""，大量空值会冲突唯一约束
+	RefreshToken string `gorm:"size:128;index" json:"-"`
 	AvatarURL    string `gorm:"type:varchar(512)" json:"avatar_url,omitempty"`
 	Bio          string `gorm:"type:varchar(255)" json:"bio,omitempty"`
 }

@@ -26,6 +26,11 @@ var (
 	ErrNewUsernameRequired = errors.New("new_username is required")
 )
 
+const (
+	accessTokenTTL  = 24 * time.Hour
+	refreshTokenTTL = 7 * 24 * time.Hour
+)
+
 func NewAccountService(accountRepository *AccountRepository, cache *rediscache.Client) *AccountService {
 	return &AccountService{accountRepository: accountRepository, cache: cache}
 }
@@ -133,13 +138,18 @@ func (as *AccountService) Login(ctx context.Context, username, password string) 
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
 
-		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(accessToken), 24*time.Hour); err != nil {
+		if account.RefreshToken != "" {
+			if err := as.cache.Del(cacheCtx, as.cache.Key("refresh:%s", account.RefreshToken)); err != nil {
+				log.Printf("failed to del old refresh lookup: %v", err)
+			}
+		}
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(accessToken), accessTokenTTL); err != nil {
 			log.Printf("failed to set cache: %v", err)
 		}
-		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d:refresh", account.ID), []byte(refreshToken), 7*24*time.Hour); err != nil {
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d:refresh", account.ID), []byte(refreshToken), refreshTokenTTL); err != nil {
 			log.Printf("failed to set refresh cache: %v", err)
 		}
-		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("refresh:%s", refreshToken), []byte(strconv.FormatUint(uint64(account.ID), 10)), 7*24*time.Hour); err != nil {
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("refresh:%s", refreshToken), []byte(strconv.FormatUint(uint64(account.ID), 10)), refreshTokenTTL); err != nil {
 			log.Printf("failed to set refresh lookup: %v", err)
 		}
 	}
@@ -177,10 +187,6 @@ func (as *AccountService) UpdateAvatar(ctx context.Context, accountID uint, avat
 	return as.accountRepository.UpdateAvatar(ctx, accountID, avatarURL)
 }
 
-func (as *AccountService) FindAll(ctx context.Context) ([]*Account, error) {
-	return as.accountRepository.FindAll(ctx)
-}
-
 func (as *AccountService) UpdateProfile(ctx context.Context, accountID uint, req *UpdateProfileRequest) error {
 	updates := map[string]interface{}{}
 	if req.Bio != "" {
@@ -195,6 +201,26 @@ func (as *AccountService) UpdateProfile(ctx context.Context, accountID uint, req
 	return as.accountRepository.UpdateFields(ctx, accountID, updates)
 }
 
+// rotateAccessToken issues a new access token, persists it, and refreshes the
+// per-account cache entry.
+func (as *AccountService) rotateAccessToken(ctx context.Context, id uint, username string) (string, error) {
+	newToken, err := auth.GenerateToken(id, username)
+	if err != nil {
+		return "", err
+	}
+	if err := as.accountRepository.UpdateToken(ctx, id, newToken); err != nil {
+		return "", err
+	}
+	if as.cache != nil {
+		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		defer cancel()
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", id), []byte(newToken), accessTokenTTL); err != nil {
+			log.Printf("failed to set cache: %v", err)
+		}
+	}
+	return newToken, nil
+}
+
 func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, uint, string, error) {
 	if refreshToken == "" {
 		return "", 0, "", errors.New("refresh token is empty")
@@ -202,43 +228,40 @@ func (as *AccountService) RefreshAccessToken(ctx context.Context, refreshToken s
 	if as.cache != nil {
 		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
 		defer cancel()
-		b, err := as.cache.GetBytes(cacheCtx, as.cache.Key("refresh:%s", refreshToken))
-		if err == nil {
-			idStr := string(b)
-			id, parseErr := strconv.ParseUint(idStr, 10, 64)
-			if parseErr == nil {
-				account, err := as.FindByID(ctx, uint(id))
-				if err == nil && account != nil && account.RefreshToken == refreshToken {
-					newToken, err := auth.GenerateToken(account.ID, account.Username)
+		if b, err := as.cache.GetBytes(cacheCtx, as.cache.Key("refresh:%s", refreshToken)); err == nil {
+			if id, parseErr := strconv.ParseUint(string(b), 10, 64); parseErr == nil {
+				// Verify against the database so rotated or logged-out tokens
+				// are rejected even when the cache entry still exists.
+				if account, dbErr := as.accountRepository.FindByIDAndRefreshToken(ctx, uint(id), refreshToken); dbErr == nil {
+					newToken, err := as.rotateAccessToken(ctx, account.ID, account.Username)
 					if err != nil {
 						return "", 0, "", err
-					}
-					if err := as.accountRepository.UpdateToken(ctx, account.ID, newToken); err != nil {
-						return "", 0, "", err
-					}
-					if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d", account.ID), []byte(newToken), 24*time.Hour); err != nil {
-						log.Printf("failed to set cache: %v", err)
 					}
 					return newToken, account.ID, account.Username, nil
 				}
 			}
 		}
 	}
-	accounts, err := as.FindAll(ctx)
+	account, err := as.accountRepository.FindByRefreshToken(ctx, refreshToken)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return "", 0, "", errors.New("invalid refresh token")
+		}
+		return "", 0, "", err
+	}
+	newToken, err := as.rotateAccessToken(ctx, account.ID, account.Username)
 	if err != nil {
 		return "", 0, "", err
 	}
-	for _, acc := range accounts {
-		if acc.RefreshToken == refreshToken {
-			newToken, err := auth.GenerateToken(acc.ID, acc.Username)
-			if err != nil {
-				return "", 0, "", err
-			}
-			if err := as.accountRepository.UpdateToken(ctx, acc.ID, newToken); err != nil {
-				return "", 0, "", err
-			}
-			return newToken, acc.ID, acc.Username, nil
+	if as.cache != nil {
+		cacheCtx, cancel := context.WithTimeout(ctx, 50*time.Millisecond)
+		defer cancel()
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("refresh:%s", refreshToken), []byte(strconv.FormatUint(uint64(account.ID), 10)), refreshTokenTTL); err != nil {
+			log.Printf("failed to set refresh lookup: %v", err)
+		}
+		if err := as.cache.SetBytes(cacheCtx, as.cache.Key("account:%d:refresh", account.ID), []byte(refreshToken), refreshTokenTTL); err != nil {
+			log.Printf("failed to set refresh cache: %v", err)
 		}
 	}
-	return "", 0, "", errors.New("invalid refresh token")
+	return newToken, account.ID, account.Username, nil
 }
