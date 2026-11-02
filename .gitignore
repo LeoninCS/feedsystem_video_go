@@ -34,3 +34,9 @@ go.work.sum
 # Editor/IDE
 .idea/
 .vscode/
+
+# Go cache
+/.gocache/
+
+# Architecture diagram
+/architecture.svg

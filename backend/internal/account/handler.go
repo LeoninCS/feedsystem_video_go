@@ -34,8 +34,9 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	if err := h.accountService.CreateAccount(c.Request.Context(), &Account{
 		Username: req.Username,
 		Password: req.Password,
+		Prompt:   req.Prompt,
 	}); err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(401, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(200, gin.H{"message": "account created"})
@@ -126,6 +127,10 @@ func (h *AccountHandler) Login(c *gin.Context) {
 	}
 	accessToken, refreshToken, err := h.accountService.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
+		if errors.Is(err, ErrInvalidPassword) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": account.Prompt, "prompt": account.Prompt})
+			return
+		}
 		c.JSON(500, gin.H{"error": err.Error()})
 		return
 	}

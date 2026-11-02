@@ -24,6 +24,7 @@ type AccountService struct {
 var (
 	ErrUsernameTaken       = errors.New("username already exists")
 	ErrNewUsernameRequired = errors.New("new_username is required")
+	ErrInvalidPassword     = errors.New("invalid password")
 )
 
 func NewAccountService(accountRepository *AccountRepository, cache *rediscache.Client) *AccountService {
@@ -116,7 +117,7 @@ func (as *AccountService) Login(ctx context.Context, username, password string) 
 		return "", "", err
 	}
 	if err := bcrypt.CompareHashAndPassword([]byte(account.Password), []byte(password)); err != nil {
-		return "", "", err
+		return "", "", ErrInvalidPassword
 	}
 	accessToken, err := auth.GenerateToken(account.ID, account.Username)
 	if err != nil {

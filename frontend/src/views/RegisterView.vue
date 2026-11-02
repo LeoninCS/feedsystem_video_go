@@ -11,7 +11,7 @@ const router = useRouter()
 const toast = useToastStore()
 
 const busy = ref(false)
-const form = reactive({ username: '', password: '' })
+const form = reactive({ username: '', password: '', prompt: '' })
 
 async function submit() {
   if (busy.value) return
@@ -24,7 +24,7 @@ async function submit() {
 
   busy.value = true
   try {
-    await accountApi.register(username, password)
+    await accountApi.register(username, password, form.prompt.trim())
     toast.success('注册成功，请登录')
     await router.push('/account')
   } catch (e) {
@@ -50,6 +50,10 @@ async function submit() {
           <div>
             <label>password</label>
             <input v-model.trim="form.password" type="password" autocomplete="new-password" />
+          </div>
+          <div>
+            <label>prompt</label>
+            <input v-model.trim="form.prompt" autocomplete="off" />
           </div>
           <div class="row" style="justify-content: flex-end">
             <button class="primary" type="button" :disabled="busy" @click="submit">注册</button>

@@ -22,3 +22,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Go cache
+/.gocache/
+
+# Architecture diagram
+/architecture.svg
