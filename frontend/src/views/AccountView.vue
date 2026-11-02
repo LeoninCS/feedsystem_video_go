@@ -20,6 +20,7 @@ const toast = useToastStore()
 
 const busy = ref(false)
 const loginForm = reactive({ username: '', password: '' })
+const loginPrompt = ref('')
 
 const me = computed(() => ({
   id: auth.claims?.account_id ?? 0,
@@ -123,6 +124,7 @@ async function onLogin() {
   }
 
   busy.value = true
+  loginPrompt.value = ''
   try {
     const res = await accountApi.login(username, password)
     auth.setTokens(res.token, res.refresh_token ?? '')
@@ -131,6 +133,7 @@ async function onLogin() {
     await loadMyVideos()
   } catch (e) {
     const msg = e instanceof ApiError ? e.message : String(e)
+    if (e instanceof ApiError && e.status === 401 && msg) loginPrompt.value = msg
     toast.error(msg)
   } finally {
     busy.value = false
@@ -226,6 +229,10 @@ watch(
           <div>
             <label>password</label>
             <input v-model.trim="loginForm.password" type="password" autocomplete="current-password" @keydown.enter="onLogin" />
+          </div>
+          <div v-if="loginPrompt" class="login-prompt" role="status">
+            <label>prompt</label>
+            <div>{{ loginPrompt }}</div>
           </div>
           <button class="primary" type="button" :disabled="busy" @click="onLogin">登录</button>
         </div>

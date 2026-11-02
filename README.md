@@ -56,14 +56,18 @@ docker compose up -d mysql redis rabbitmq
 
 # 后端
 cd backend
-CONFIG_PATH=configs/config.compose-local.yaml go run ./cmd
+$env:CONFIG_PATH="configs/config.compose-local.yaml"
+go run ./cmd
 
 # Worker
-CONFIG_PATH=configs/config.compose-local.yaml go run ./cmd/worker
+$env:CONFIG_PATH="configs/config.compose-local.yaml"
+cd backend
+ go run ./cmd/worker
 
 # 前端
 cd frontend
-npm install && npm run dev
+npm.cmd install 
+npm.cmd run dev
 ```
 
 ## CI

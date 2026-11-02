@@ -8,11 +8,13 @@ type Account struct {
 	RefreshToken string `json:"-"`
 	AvatarURL    string `gorm:"type:varchar(512)" json:"avatar_url,omitempty"`
 	Bio          string `gorm:"type:varchar(255)" json:"bio,omitempty"`
+	Prompt       string `gorm:"type:text" json:"-"`
 }
 
 type CreateAccountRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	Prompt   string `json:"prompt"`
 }
 
 type RenameRequest struct {
