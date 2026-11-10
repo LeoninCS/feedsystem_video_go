@@ -45,8 +45,8 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 	}
 
 	//事务保证视频写入库和消息写入本地消息表的一致性
-	err := vs.repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(video).Error; err != nil {
+	err := vs.repo.Transaction(ctx, func(tx *gorm.DB) error {
+		if err := vs.repo.CreateVideoInTx(ctx, tx, video); err != nil {
 			return err
 		}
 
@@ -57,21 +57,12 @@ func (vs *VideoService) Publish(ctx context.Context, video *Video) error {
 			CreateTime: video.CreateTime,
 		}
 
-		if err := tx.Create(&msg).Error; err != nil {
+		if err := vs.repo.CreateMsgInTx(ctx, tx, &msg); err != nil {
 			return err
 		}
 
 		tags := ExtractTags(video.Title + " " + video.Description)
-		for _, tagName := range tags {
-			var tag Tag
-			if err := tx.Where("name = ?", tagName).FirstOrCreate(&tag, Tag{Name: tagName}).Error; err != nil {
-				return err
-			}
-			if err := tx.Create(&VideoTag{VideoID: video.ID, TagID: tag.ID}).Error; err != nil {
-				return err
-			}
-		}
-		return nil
+		return vs.repo.AddTagsInTx(ctx, tx, video.ID, tags)
 	})
 	return err
 

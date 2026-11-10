@@ -27,28 +27,11 @@ func (r *LikeRepository) Unlike(ctx context.Context, like *Like) error {
 }
 
 func (r *LikeRepository) LikeIgnoreDuplicate(ctx context.Context, like *Like) (created bool, err error) {
-	if like == nil || like.VideoID == 0 || like.AccountID == 0 {
-		return false, nil
-	}
-	err = r.db.WithContext(ctx).Create(like).Error
-	if err == nil {
-		return true, nil
-	}
-	var mysqlErr *mysql.MySQLError
-	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
-		return false, nil
-	}
-	return false, err
+	return r.LikeInTx(ctx, nil, like)
 }
 
-func (r *LikeRepository) DeleteByVideoAndAccount(ctx context.Context, videoID, accountID uint) (deleted bool, err error) {
-	if videoID == 0 || accountID == 0 {
-		return false, nil
-	}
-	res := r.db.WithContext(ctx).
-		Where("video_id = ? AND account_id = ?", videoID, accountID).
-		Delete(&Like{})
-	return res.RowsAffected > 0, res.Error
+func (r *LikeRepository) DeleteByVideoAndAccount(ctx context.Context, videoID, accountID uint) (bool, error) {
+	return r.UnlikeInTx(ctx, nil, &Like{VideoID: videoID, AccountID: accountID})
 }
 
 func (r *LikeRepository) IsLiked(ctx context.Context, videoID, accountID uint) (bool, error) {
@@ -100,3 +83,34 @@ func (r *LikeRepository) ListLikedVideos(ctx context.Context, accountID uint) ([
 	}
 	return videos, nil
 }
+
+// LikeInTx inserts a like, returning false for a duplicate or invalid IDs.
+// Pass tx inside a transaction. A nil tx uses the repository connection and commits
+// independently; it can self-deadlock on rows locked by the caller until
+// innodb_lock_wait_timeout (自锁).
+func (r *LikeRepository) LikeInTx(ctx context.Context, tx *gorm.DB, like *Like) (bool, error) {
+	if like == nil || like.VideoID == 0 || like.AccountID == 0 {
+		return false, nil
+	}
+	err := transactionDB(ctx, tx, r.db).Create(like).Error
+	var mysqlErr *mysql.MySQLError
+	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// UnlikeInTx returns whether an existing like was deleted.
+// Pass tx inside a transaction. A nil tx uses the repository connection and commits
+// independently; it can self-deadlock on rows locked by the caller until
+// innodb_lock_wait_timeout (自锁).
+func (r *LikeRepository) UnlikeInTx(ctx context.Context, tx *gorm.DB, like *Like) (bool, error) {
+	if like == nil || like.VideoID == 0 || like.AccountID == 0 {
+		return false, nil
+	}
+	result := transactionDB(ctx, tx, r.db).Where("video_id = ? AND account_id = ?", like.VideoID, like.AccountID).Delete(&Like{})
+	return result.RowsAffected > 0, result.Error
+}
+
+// videoRepository shares this repository's database for optional service dependencies.
+func (r *LikeRepository) videoRepository() *VideoRepository { return NewVideoRepository(r.db) }
