@@ -52,7 +52,12 @@ func (as *AccountService) Rename(ctx context.Context, accountID uint, newUsernam
 		return "", err
 	}
 
-	if err := as.accountRepository.RenameWithToken(ctx, accountID, newUsername, token); err != nil {
+	if err := as.accountRepository.Transaction(ctx, func(tx *gorm.DB) error {
+		if err := as.accountRepository.RenameInTx(ctx, tx, accountID, newUsername); err != nil {
+			return err
+		}
+		return as.accountRepository.UpdateTokenInTx(ctx, tx, accountID, token)
+	}); err != nil {
 		var mysqlErr *mysql.MySQLError
 		if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
 			return "", ErrUsernameTaken

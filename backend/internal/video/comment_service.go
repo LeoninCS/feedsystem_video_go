@@ -65,18 +65,17 @@ func (s *CommentService) Publish(ctx context.Context, comment *Comment) error {
 
 	// Fallback: direct MySQL write when comment MQ publish fails.
 	if !mysqlEnqueued {
-		if err := s.repo.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-			if err := tx.Select("id").First(&Video{}, comment.VideoID).Error; err != nil {
+		if err := s.repo.Transaction(ctx, func(tx *gorm.DB) error {
+			if err := s.VideoRepository.RequireVideoInTx(ctx, tx, comment.VideoID); err != nil {
 				if errors.Is(err, gorm.ErrRecordNotFound) {
 					return errors.New("video not found")
 				}
 				return err
 			}
-			if err := tx.Create(comment).Error; err != nil {
+			if err := s.repo.CreateCommentInTx(ctx, tx, comment); err != nil {
 				return err
 			}
-			return tx.Model(&Video{}).Where("id = ?", comment.VideoID).
-				UpdateColumn("popularity", gorm.Expr("popularity + 1")).Error
+			return s.VideoRepository.ChangePopularityInTx(ctx, tx, comment.VideoID, 1)
 		}); err != nil {
 			return err
 		}
@@ -134,24 +133,11 @@ func (s *CommentService) notifyMentions(ctx context.Context, comment *Comment) {
 			continue
 		}
 		seen[username] = true
-		var accID uint
-		if err := s.repo.db.WithContext(ctx).Table("accounts").Where("username = ?", username).Select("id").Scan(&accID).Error; err != nil || accID == 0 {
+		accID, err := s.repo.FindAccountIDByUsername(ctx, username)
+		if err != nil || accID == 0 {
 			continue
 		}
-		notif := struct {
-			RecipientID uint
-			SenderID    uint
-			Type        string
-			TargetID    uint
-			Content     string
-		}{
-			RecipientID: accID,
-			SenderID:    comment.AuthorID,
-			Type:        "mention",
-			TargetID:    comment.VideoID,
-			Content:     comment.Username + " 在评论中提到了你",
-		}
-		if err := s.repo.db.WithContext(ctx).Table("notifications").Create(&notif).Error; err != nil {
+		if err := s.repo.CreateMentionNotification(ctx, accID, comment.AuthorID, comment.VideoID, comment.Username+" 在评论中提到了你"); err != nil {
 			log.Printf("create mention notification failed: %v", err)
 		}
 	}

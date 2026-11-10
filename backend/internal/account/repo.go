@@ -33,18 +33,11 @@ func (ar *AccountRepository) Rename(ctx context.Context, id uint, newUsername st
 }
 
 func (ar *AccountRepository) RenameWithToken(ctx context.Context, id uint, newUsername string, token string) error {
-	return ar.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		result := tx.Model(&Account{}).Where("id = ?", id).Update("username", newUsername)
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			return gorm.ErrRecordNotFound
-		}
-		if err := tx.Model(&Account{}).Where("id = ?", id).Update("token", token).Error; err != nil {
+	return ar.Transaction(ctx, func(tx *gorm.DB) error {
+		if err := ar.RenameInTx(ctx, tx, id, newUsername); err != nil {
 			return err
 		}
-		return nil
+		return ar.UpdateTokenInTx(ctx, tx, id, token)
 	})
 }
 
@@ -103,4 +96,39 @@ func (ar *AccountRepository) FindAll(ctx context.Context) ([]*Account, error) {
 		return nil, err
 	}
 	return accounts, nil
+}
+
+// Transaction commits on nil and rolls back on an error or panic.
+// All repository operations in fn must receive the supplied tx.
+func (ar *AccountRepository) Transaction(ctx context.Context, fn func(tx *gorm.DB) error) error {
+	return ar.db.WithContext(ctx).Transaction(fn)
+}
+
+// RenameInTx changes the username or returns gorm.ErrRecordNotFound.
+// Pass tx inside a transaction. A nil tx uses the repository connection and commits
+// independently; it can self-deadlock on rows locked by the caller until
+// innodb_lock_wait_timeout (自锁).
+func (ar *AccountRepository) RenameInTx(ctx context.Context, tx *gorm.DB, id uint, newUsername string) error {
+	if tx == nil {
+		tx = ar.db
+	}
+	result := tx.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Update("username", newUsername)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateTokenInTx replaces an account token.
+// Pass tx inside a transaction. A nil tx uses the repository connection and commits
+// independently; it can self-deadlock on rows locked by the caller until
+// innodb_lock_wait_timeout (自锁).
+func (ar *AccountRepository) UpdateTokenInTx(ctx context.Context, tx *gorm.DB, id uint, token string) error {
+	if tx == nil {
+		tx = ar.db
+	}
+	return tx.WithContext(ctx).Model(&Account{}).Where("id = ?", id).Update("token", token).Error
 }
